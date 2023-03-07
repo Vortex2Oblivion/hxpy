@@ -209,6 +209,6 @@
 	</files>
 
 	<files id="haxe">
-		<compilervalue name="-I" value="${haxelib:hxpy}/project/python/src/Include/cpython/" />
+		<compilervalue name="-I" value="${haxelib:hxpy}/project/python/src/Include/" />
 	</files>
 </xml>
