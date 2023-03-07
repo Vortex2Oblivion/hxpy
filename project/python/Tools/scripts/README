@@ -1,0 +1,10 @@
+This directory contains a collection of executable Python scripts that are
+useful while building, extending or managing Python.
+
+2to3                      Main script for running the 2to3 conversion tool
+combinerefs.py            A helper for analyzing PYTHONDUMPREFS output
+idle3                     Main program to start IDLE
+parse_html5_entities.py   Utility for parsing HTML5 entity definitions
+pydoc3                    Python documentation browser
+run_tests.py              Run the test suite with more sensible default options
+stable_abi.py             Stable ABI checks and file generators.
