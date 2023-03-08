@@ -206,6 +206,7 @@
 		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_unicodeobject.h" />
 		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_unionobject.h" />
 		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_warnings.h" />
+		<file name="${haxelib:hxpy}/project/python/src/PC/pyconfig.h" />
 	</files>
 
 	<files id="haxe">
