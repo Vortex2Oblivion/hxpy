@@ -207,8 +207,6 @@
 		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_unionobject.h" />
 		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_warnings.h" />
 		<file name="${haxelib:hxpy}/project/python/src/PC/pyconfig.h" />
-		<file name="${haxelib:hxpy}/project/python/src/PC/python3.lib" />
-		<file name="${haxelib:hxpy}/project/python/src/PC/python311.lib" />
 	</files>
 
 	<files id="haxe">
