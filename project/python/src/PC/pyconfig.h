@@ -260,7 +260,7 @@ typedef int pid_t;
 Py_NO_ENABLE_SHARED to find out.  Also support MS_NO_COREDLL for b/w compat */
 #if !defined(MS_NO_COREDLL) && !defined(Py_NO_ENABLE_SHARED)
 #       define Py_ENABLE_SHARED 1 /* standard symbol for shared library */
-#       define MS_COREDLL       /* deprecated old symbol */
+#       /*define MS_COREDLL/*       /* deprecated old symbol */
 #endif /* !MS_NO_COREDLL && ... */
 
 /*  All windows compilers that use this header support __declspec */
