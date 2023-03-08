@@ -37,6 +37,7 @@
 	<!-- _______________________________ Libraries ______________________________ -->
 
 	<haxelib name="flixel" />
+	<haxelib name="hxpy" />
 	
 
 	<!--In case you want to use the addons package-->
