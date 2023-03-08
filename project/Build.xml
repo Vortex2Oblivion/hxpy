@@ -212,6 +212,4 @@
 	<files id="haxe">
 		<compilervalue name="-I" value="${haxelib:hxpy}/project/python/src/Include/" />
 		<compilervalue name="-I" value="${haxelib:hxpy}/project/python/src/PC/" />
-		<compilerflag value="-Py_BUILD_CORE" />
-		<compilerflag value="-Py_BUILD_CORE_BUILTIN" />	</files>
 </xml>
