@@ -212,4 +212,5 @@
 	<files id="haxe">
 		<compilervalue name="-I" value="${haxelib:hxpy}/project/python/src/Include/" />
 		<compilervalue name="-I" value="${haxelib:hxpy}/project/python/src/PC/" />
+	</files>
 </xml>
