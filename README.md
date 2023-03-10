@@ -2,7 +2,7 @@
 
 ![](https://img.shields.io/github/repo-size/Vortex2Oblivion/hxpy) ![](https://badgen.net/github/open-issues/Vortex2Oblivion/hxpy) ![](https://badgen.net/badge/license/MIT/green)
 
-Haxe/hxcpp @:native bindings for Pyhon
+Haxe/hxcpp @:native bindings for Python
 
 ### Installation
 
