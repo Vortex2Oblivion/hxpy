@@ -12,6 +12,21 @@ package hxpy;
 @:keep
 extern class Python
 {
+    @:native('::String(PY_MAJOR_VERSION)')
+	static var VERSION_MAJOR:String;
+
+    @:native('::String(PY_MINOR_VERSION)')
+	static var VERSION_MINOR:String;
+
+    @:native('::String(PY_MICRO_VERSION)')
+	static var VERSION_MICRO:String;
+
+    @:native('::String(PY_RELEASE_LEVEL)')
+	static var RELEASE_LEVEL:String;
+
+    @:native('::String(PY_RELEASE_SERIAL)')
+	static var RELEASE_SERIAL:String;
+
     @:native('::String(PY_VERSION)')
 	static var VERSION:String;
 }
