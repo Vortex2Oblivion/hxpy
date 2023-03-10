@@ -1,5 +1,7 @@
 package hxpy;
 
+import haxe.display.Display.Define;
+
 @:buildXml("<include name='${haxelib:hxpy}/project/Build.xml' />")
 @:headerCode("#define PY_SSIZE_T_CLEAN")
 @:include("Python.h")
