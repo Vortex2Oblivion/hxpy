@@ -5,7 +5,6 @@
     "tags": ["hxcpp", "bindings", "python"],
     "description": "Haxe/hxcpp @:native bindings for Python",
     "version": "0.0.1",
-    "classPath": "hxpy/",
     "releasenote": "Work In Progress",
     "contributors": ["Vortex"],
     "dependencies": {
