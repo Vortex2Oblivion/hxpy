@@ -3,5 +3,5 @@ package hxpy;
 @:include("PythonOpen.h")
 extern class PythonOpen{
     @:native("main")
-	public static function open():String;
+	public static function open(argc:Int):String;
 }
