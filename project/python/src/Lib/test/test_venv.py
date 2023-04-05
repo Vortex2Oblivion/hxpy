@@ -17,7 +17,7 @@ import subprocess
 import sys
 import sysconfig
 import tempfile
-from test.support import (captured_stdout, captured_stderr,
+from test.support import (captured_stdout, captured_stderr, requires_zlib,
                           skip_if_broken_multiprocessing_synchronize, verbose,
                           requires_subprocess, is_emscripten, is_wasi,
                           requires_venv_with_pip, TEST_HOME_DIR)

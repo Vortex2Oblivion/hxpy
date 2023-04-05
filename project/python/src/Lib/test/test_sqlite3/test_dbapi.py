@@ -30,7 +30,7 @@ import unittest
 import urllib.parse
 
 from test.support import (
-    SHORT_TIMEOUT, check_disallow_instantiation, requires_subprocess,
+    SHORT_TIMEOUT, bigmemtest, check_disallow_instantiation, requires_subprocess,
     is_emscripten, is_wasi
 )
 from test.support import threading_helper
@@ -59,17 +59,6 @@ class ModuleTests(unittest.TestCase):
     def test_api_level(self):
         self.assertEqual(sqlite.apilevel, "2.0",
                          "apilevel is %s, should be 2.0" % sqlite.apilevel)
-
-    def test_deprecated_version(self):
-        msg = "deprecated and will be removed in Python 3.14"
-        for attr in "version", "version_info":
-            with self.subTest(attr=attr):
-                with self.assertWarnsRegex(DeprecationWarning, msg) as cm:
-                    getattr(sqlite, attr)
-                self.assertEqual(cm.filename,  __file__)
-                with self.assertWarnsRegex(DeprecationWarning, msg) as cm:
-                    getattr(sqlite.dbapi2, attr)
-                self.assertEqual(cm.filename,  __file__)
 
     def test_thread_safety(self):
         self.assertIn(sqlite.threadsafety, {0, 1, 3},
@@ -344,6 +333,15 @@ class ModuleTests(unittest.TestCase):
                              sqlite.SQLITE_CONSTRAINT_CHECK)
             self.assertEqual(exc.sqlite_errorname, "SQLITE_CONSTRAINT_CHECK")
 
+    # sqlite3_enable_shared_cache() is deprecated on macOS and calling it may raise
+    # OperationalError on some buildbots.
+    @unittest.skipIf(sys.platform == "darwin", "shared cache is deprecated on macOS")
+    def test_shared_cache_deprecated(self):
+        for enable in (True, False):
+            with self.assertWarns(DeprecationWarning) as cm:
+                sqlite.enable_shared_cache(enable)
+            self.assertIn("dbapi.py", cm.filename)
+
     def test_disallow_instantiation(self):
         cx = sqlite.connect(":memory:")
         check_disallow_instantiation(self, type(cx("select 1")))
@@ -606,6 +604,7 @@ class SerializeTests(unittest.TestCase):
             with cx:
                 cx.execute("create table t(t)")
             data = cx.serialize()
+            self.assertEqual(len(data), 8192)
 
             # Remove test table, verify that it was removed.
             with cx:
@@ -638,6 +637,13 @@ class SerializeTests(unittest.TestCase):
                 # SQLite does not generate an error until you try to query the
                 # deserialized database.
                 cx.execute("create table fail(f)")
+
+    @unittest.skipUnless(sys.maxsize > 2**32, 'requires 64bit platform')
+    @bigmemtest(size=2**63, memuse=3, dry_run=False)
+    def test_deserialize_too_much_data_64bit(self):
+        with memory_database() as cx:
+            with self.assertRaisesRegex(OverflowError, "'data' is too large"):
+                cx.deserialize(b"b" * size)
 
 
 class OpenTests(unittest.TestCase):
@@ -859,21 +865,6 @@ class CursorTests(unittest.TestCase):
         self.cu.execute("insert into test(name) values ('foo')")
         with self.assertRaises(ZeroDivisionError):
             self.cu.execute("select name from test where name=?", L())
-
-    def test_execute_named_param_and_sequence(self):
-        dataset = (
-            ("select :a", (1,)),
-            ("select :a, ?, ?", (1, 2, 3)),
-            ("select ?, :b, ?", (1, 2, 3)),
-            ("select ?, ?, :c", (1, 2, 3)),
-            ("select :a, :b, ?", (1, 2, 3)),
-        )
-        msg = "Binding.*is a named parameter"
-        for query, params in dataset:
-            with self.subTest(query=query, params=params):
-                with self.assertWarnsRegex(DeprecationWarning, msg) as cm:
-                    self.cu.execute(query, params)
-                self.assertEqual(cm.filename,  __file__)
 
     def test_execute_too_many_params(self):
         category = sqlite.SQLITE_LIMIT_VARIABLE_NUMBER

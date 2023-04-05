@@ -35,9 +35,7 @@ This software comes with no warranty. Use at your own risk.
 #endif
 
 #if defined(MS_WINDOWS)
-#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
-#endif
 #include <windows.h>
 #endif
 
@@ -459,12 +457,12 @@ _locale__getdefaultlocale_impl(PyObject *module)
 
     PyOS_snprintf(encoding, sizeof(encoding), "cp%u", GetACP());
 
-    if (GetLocaleInfoA(LOCALE_USER_DEFAULT,
+    if (GetLocaleInfo(LOCALE_USER_DEFAULT,
                       LOCALE_SISO639LANGNAME,
                       locale, sizeof(locale))) {
         Py_ssize_t i = strlen(locale);
         locale[i++] = '_';
-        if (GetLocaleInfoA(LOCALE_USER_DEFAULT,
+        if (GetLocaleInfo(LOCALE_USER_DEFAULT,
                           LOCALE_SISO3166CTRYNAME,
                           locale+i, (int)(sizeof(locale)-i)))
             return Py_BuildValue("ss", locale, encoding);
@@ -476,7 +474,7 @@ _locale__getdefaultlocale_impl(PyObject *module)
 
     locale[0] = '0';
     locale[1] = 'x';
-    if (GetLocaleInfoA(LOCALE_USER_DEFAULT, LOCALE_IDEFAULTLANGUAGE,
+    if (GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_IDEFAULTLANGUAGE,
                       locale+2, sizeof(locale)-2)) {
         return Py_BuildValue("ss", locale, encoding);
     }

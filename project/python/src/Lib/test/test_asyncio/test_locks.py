@@ -1370,7 +1370,7 @@ class BarrierTests(unittest.IsolatedAsyncioTestCase):
                 # catch here waiting tasks
                 results1.append(True)
             else:
-                # here drained task outside the barrier
+                # here drained task ouside the barrier
                 if rest_of_tasks == barrier._count:
                     # tasks outside the barrier
                     await barrier.reset()
@@ -1476,7 +1476,7 @@ class BarrierTests(unittest.IsolatedAsyncioTestCase):
                 # last task exited from barrier
                 await barrier.reset()
 
-                # wait here to reach the `parties`
+                # wit here to reach the `parties`
                 await barrier.wait()
             else:
                 try:

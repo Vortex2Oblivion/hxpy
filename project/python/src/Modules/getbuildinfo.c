@@ -31,18 +31,12 @@
 #define GITBRANCH ""
 #endif
 
-static int initialized = 0;
-static char buildinfo[50 + sizeof(GITVERSION) +
-                      ((sizeof(GITTAG) > sizeof(GITBRANCH)) ?
-                       sizeof(GITTAG) : sizeof(GITBRANCH))];
-
 const char *
 Py_GetBuildInfo(void)
 {
-    if (initialized) {
-        return buildinfo;
-    }
-    initialized = 1;
+    static char buildinfo[50 + sizeof(GITVERSION) +
+                          ((sizeof(GITTAG) > sizeof(GITBRANCH)) ?
+                           sizeof(GITTAG) : sizeof(GITBRANCH))];
     const char *revision = _Py_gitversion();
     const char *sep = *revision ? ":" : "";
     const char *gitid = _Py_gitidentifier();

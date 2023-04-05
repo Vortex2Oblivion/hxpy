@@ -2,6 +2,7 @@
 
 from test import support
 import unittest
+from unittest.mock import MagicMock
 import sys
 import difflib
 import gc
@@ -345,7 +346,7 @@ class TraceTestCase(unittest.TestCase):
         return Tracer()
 
     def compare_events(self, line_offset, events, expected_events):
-        events = [(l - line_offset if l is not None else None, e) for (l, e) in events]
+        events = [(l - line_offset, e) for (l, e) in events]
         if events != expected_events:
             self.fail(
                 "events did not match expectation:\n" +
@@ -833,8 +834,9 @@ class TraceTestCase(unittest.TestCase):
              (5, 'line'),
              (6, 'line'),
              (7, 'line'),
-             (10, 'line')] +
-             ([(13, 'line'), (13, 'return')] if __debug__ else [(10, 'return')]))
+             (10, 'line'),
+             (13, 'line'),
+             (13, 'return')])
 
     def test_continue_through_finally(self):
 
@@ -869,8 +871,9 @@ class TraceTestCase(unittest.TestCase):
              (6, 'line'),
              (7, 'line'),
              (10, 'line'),
-             (3, 'line')] +
-             ([(13, 'line'), (13, 'return')] if __debug__ else [(3, 'return')]))
+             (3, 'line'),
+             (13, 'line'),
+             (13, 'return')])
 
     def test_return_through_finally(self):
 
@@ -2795,8 +2798,12 @@ class TestEdgeCases(unittest.TestCase):
                 sys.settrace(bar)
 
         sys.settrace(A())
-        sys.settrace(foo)
-        self.assertEqual(sys.gettrace(), bar)
+        with support.catch_unraisable_exception() as cm:
+            sys.settrace(foo)
+            self.assertEqual(cm.unraisable.object, A.__del__)
+            self.assertIsInstance(cm.unraisable.exc_value, RuntimeError)
+
+        self.assertEqual(sys.gettrace(), foo)
 
 
     def test_same_object(self):

@@ -57,10 +57,8 @@ extern void bzero(void *, int);
 #endif
 
 #ifdef MS_WINDOWS
-#  ifndef WIN32_LEAN_AND_MEAN
-#    define WIN32_LEAN_AND_MEAN
-#  endif
-#  include <winsock2.h>
+#  define WIN32_LEAN_AND_MEAN
+#  include <winsock.h>
 #else
 #  define SOCKET int
 #endif
@@ -1654,7 +1652,8 @@ select_epoll___enter___impl(pyEpoll_Object *self)
     if (self->epfd < 0)
         return pyepoll_err_closed();
 
-    return Py_NewRef(self);
+    Py_INCREF(self);
+    return (PyObject *)self;
 }
 
 /*[clinic input]

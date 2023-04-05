@@ -129,8 +129,7 @@ class RegressionTests(unittest.TestCase):
         con = sqlite.connect(":memory:",detect_types=sqlite.PARSE_DECLTYPES)
         cur = con.cursor()
         cur.execute("create table foo(bar timestamp)")
-        with self.assertWarnsRegex(DeprecationWarning, "adapter"):
-            cur.execute("insert into foo(bar) values (?)", (datetime.datetime.now(),))
+        cur.execute("insert into foo(bar) values (?)", (datetime.datetime.now(),))
         cur.execute(SELECT)
         cur.execute("drop table foo")
         cur.execute("create table foo(bar integer)")
@@ -306,8 +305,7 @@ class RegressionTests(unittest.TestCase):
         cur.execute("INSERT INTO t (x) VALUES ('2012-04-04 15:06:00.123456789')")
 
         cur.execute("SELECT * FROM t")
-        with self.assertWarnsRegex(DeprecationWarning, "converter"):
-            values = [x[0] for x in cur.fetchall()]
+        values = [x[0] for x in cur.fetchall()]
 
         self.assertEqual(values, [
             datetime.datetime(2012, 4, 4, 15, 6, 0, 456000),
@@ -471,6 +469,18 @@ class RegressionTests(unittest.TestCase):
             con.executescript("select step(t) from t")
             self.assertEqual(steps, values)
 
+    def test_custom_cursor_object_crash_gh_99886(self):
+        # This test segfaults on GH-99886
+        class MyCursor(sqlite.Cursor):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                # this can go before or after the super call; doesn't matter
+                self.some_attr = None
+
+        with memory_database() as con:
+            cur = con.cursor(MyCursor)
+            cur.close()
+            del cur
 
 class RecursiveUseOfCursors(unittest.TestCase):
     # GH-80254: sqlite3 should not segfault for recursive use of cursors.

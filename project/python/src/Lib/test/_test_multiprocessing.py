@@ -124,8 +124,6 @@ else:
 # BaseManager.shutdown_timeout
 SHUTDOWN_TIMEOUT = support.SHORT_TIMEOUT
 
-WAIT_ACTIVE_CHILDREN_TIMEOUT = 5.0
-
 HAVE_GETVALUE = not getattr(_multiprocessing,
                             'HAVE_BROKEN_SEM_GETVALUE', False)
 
@@ -4320,13 +4318,18 @@ class _TestSharedMemory(BaseTestCase):
             p.terminate()
             p.wait()
 
-            err_msg = ("A SharedMemory segment was leaked after "
-                       "a process was abruptly terminated")
-            for _ in support.sleeping_retry(support.LONG_TIMEOUT, err_msg):
+            deadline = time.monotonic() + support.LONG_TIMEOUT
+            t = 0.1
+            while time.monotonic() < deadline:
+                time.sleep(t)
+                t = min(t*2, 5)
                 try:
                     smm = shared_memory.SharedMemory(name, create=False)
                 except FileNotFoundError:
                     break
+            else:
+                raise AssertionError("A SharedMemory segment was leaked after"
+                                     " a process was abruptly terminated.")
 
             if os.name == 'posix':
                 # Without this line it was raising warnings like:
@@ -4967,13 +4970,11 @@ class TestFlags(unittest.TestCase):
         conn.send(tuple(sys.flags))
 
     @classmethod
-    def run_in_child(cls, start_method):
+    def run_in_child(cls):
         import json
-        mp = multiprocessing.get_context(start_method)
-        r, w = mp.Pipe(duplex=False)
-        p = mp.Process(target=cls.run_in_grandchild, args=(w,))
-        with warnings.catch_warnings(category=DeprecationWarning):
-            p.start()
+        r, w = multiprocessing.Pipe(duplex=False)
+        p = multiprocessing.Process(target=cls.run_in_grandchild, args=(w,))
+        p.start()
         grandchild_flags = r.recv()
         p.join()
         r.close()
@@ -4984,10 +4985,8 @@ class TestFlags(unittest.TestCase):
     def test_flags(self):
         import json
         # start child process using unusual flags
-        prog = (
-            'from test._test_multiprocessing import TestFlags; '
-            f'TestFlags.run_in_child({multiprocessing.get_start_method()!r})'
-        )
+        prog = ('from test._test_multiprocessing import TestFlags; ' +
+                'TestFlags.run_in_child()')
         data = subprocess.check_output(
             [sys.executable, '-E', '-S', '-O', '-c', prog])
         child_flags, grandchild_flags = json.loads(data.decode('ascii'))
@@ -5293,12 +5292,13 @@ class TestResourceTracker(unittest.TestCase):
         # Check that killing process does not leak named semaphores
         #
         cmd = '''if 1:
-            import time, os
+            import time, os, tempfile
             import multiprocessing as mp
             from multiprocessing import resource_tracker
             from multiprocessing.shared_memory import SharedMemory
 
             mp.set_start_method("spawn")
+            rand = tempfile._RandomNameSequence()
 
 
             def create_and_register_resource(rtype):
@@ -5339,10 +5339,9 @@ class TestResourceTracker(unittest.TestCase):
                 p.terminate()
                 p.wait()
 
-                err_msg = (f"A {rtype} resource was leaked after a process was "
-                           f"abruptly terminated")
-                for _ in support.sleeping_retry(support.SHORT_TIMEOUT,
-                                                  err_msg):
+                deadline = time.monotonic() + support.LONG_TIMEOUT
+                while time.monotonic() < deadline:
+                    time.sleep(.5)
                     try:
                         _resource_unlink(name2, rtype)
                     except OSError as e:
@@ -5350,7 +5349,10 @@ class TestResourceTracker(unittest.TestCase):
                         # EINVAL
                         self.assertIn(e.errno, (errno.ENOENT, errno.EINVAL))
                         break
-
+                else:
+                    raise AssertionError(
+                        f"A {rtype} resource was leaked after a process was "
+                        f"abruptly terminated.")
                 err = p.stderr.read().decode('utf-8')
                 p.stderr.close()
                 expected = ('resource_tracker: There appear to be 2 leaked {} '
@@ -5586,18 +5588,18 @@ class TestSyncManagerTypes(unittest.TestCase):
         # but this can take a bit on slow machines, so wait a few seconds
         # if there are other children too (see #17395).
         join_process(self.proc)
-
-        timeout = WAIT_ACTIVE_CHILDREN_TIMEOUT
         start_time = time.monotonic()
-        for _ in support.sleeping_retry(timeout, error=False):
-            if len(multiprocessing.active_children()) <= 1:
-                break
-        else:
+        t = 0.01
+        while len(multiprocessing.active_children()) > 1:
+            time.sleep(t)
+            t *= 2
             dt = time.monotonic() - start_time
-            support.environment_altered = True
-            support.print_warning(f"multiprocessing.Manager still has "
-                                  f"{multiprocessing.active_children()} "
-                                  f"active children after {dt:.1f} seconds")
+            if dt >= 5.0:
+                test.support.environment_altered = True
+                support.print_warning(f"multiprocessing.Manager still has "
+                                      f"{multiprocessing.active_children()} "
+                                      f"active children after {dt} seconds")
+                break
 
     def run_worker(self, worker, obj):
         self.proc = multiprocessing.Process(target=worker, args=(obj, ))
@@ -5702,48 +5704,45 @@ class TestSyncManagerTypes(unittest.TestCase):
 
     @classmethod
     def _test_list(cls, obj):
-        case = unittest.TestCase()
-        case.assertEqual(obj[0], 5)
-        case.assertEqual(obj.count(5), 1)
-        case.assertEqual(obj.index(5), 0)
+        assert obj[0] == 5
+        assert obj.count(5) == 1
+        assert obj.index(5) == 0
         obj.sort()
         obj.reverse()
         for x in obj:
             pass
-        case.assertEqual(len(obj), 1)
-        case.assertEqual(obj.pop(0), 5)
+        assert len(obj) == 1
+        assert obj.pop(0) == 5
 
     def test_list(self):
         o = self.manager.list()
         o.append(5)
         self.run_worker(self._test_list, o)
-        self.assertIsNotNone(o)
+        assert not o
         self.assertEqual(len(o), 0)
 
     @classmethod
     def _test_dict(cls, obj):
-        case = unittest.TestCase()
-        case.assertEqual(len(obj), 1)
-        case.assertEqual(obj['foo'], 5)
-        case.assertEqual(obj.get('foo'), 5)
-        case.assertListEqual(list(obj.items()), [('foo', 5)])
-        case.assertListEqual(list(obj.keys()), ['foo'])
-        case.assertListEqual(list(obj.values()), [5])
-        case.assertDictEqual(obj.copy(), {'foo': 5})
-        case.assertTupleEqual(obj.popitem(), ('foo', 5))
+        assert len(obj) == 1
+        assert obj['foo'] == 5
+        assert obj.get('foo') == 5
+        assert list(obj.items()) == [('foo', 5)]
+        assert list(obj.keys()) == ['foo']
+        assert list(obj.values()) == [5]
+        assert obj.copy() == {'foo': 5}
+        assert obj.popitem() == ('foo', 5)
 
     def test_dict(self):
         o = self.manager.dict()
         o['foo'] = 5
         self.run_worker(self._test_dict, o)
-        self.assertIsNotNone(o)
+        assert not o
         self.assertEqual(len(o), 0)
 
     @classmethod
     def _test_value(cls, obj):
-        case = unittest.TestCase()
-        case.assertEqual(obj.value, 1)
-        case.assertEqual(obj.get(), 1)
+        assert obj.value == 1
+        assert obj.get() == 1
         obj.set(2)
 
     def test_value(self):
@@ -5754,11 +5753,10 @@ class TestSyncManagerTypes(unittest.TestCase):
 
     @classmethod
     def _test_array(cls, obj):
-        case = unittest.TestCase()
-        case.assertEqual(obj[0], 0)
-        case.assertEqual(obj[1], 1)
-        case.assertEqual(len(obj), 2)
-        case.assertListEqual(list(obj), [0, 1])
+        assert obj[0] == 0
+        assert obj[1] == 1
+        assert len(obj) == 2
+        assert list(obj) == [0, 1]
 
     def test_array(self):
         o = self.manager.Array('i', [0, 1])
@@ -5766,9 +5764,8 @@ class TestSyncManagerTypes(unittest.TestCase):
 
     @classmethod
     def _test_namespace(cls, obj):
-        case = unittest.TestCase()
-        case.assertEqual(obj.x, 0)
-        case.assertEqual(obj.y, 1)
+        assert obj.x == 0
+        assert obj.y == 1
 
     def test_namespace(self):
         o = self.manager.Namespace()
@@ -5899,17 +5896,18 @@ class ManagerMixin(BaseMixin):
         # only the manager process should be returned by active_children()
         # but this can take a bit on slow machines, so wait a few seconds
         # if there are other children too (see #17395)
-        timeout = WAIT_ACTIVE_CHILDREN_TIMEOUT
         start_time = time.monotonic()
-        for _ in support.sleeping_retry(timeout, error=False):
-            if len(multiprocessing.active_children()) <= 1:
-                break
-        else:
+        t = 0.01
+        while len(multiprocessing.active_children()) > 1:
+            time.sleep(t)
+            t *= 2
             dt = time.monotonic() - start_time
-            support.environment_altered = True
-            support.print_warning(f"multiprocessing.Manager still has "
-                                  f"{multiprocessing.active_children()} "
-                                  f"active children after {dt:.1f} seconds")
+            if dt >= 5.0:
+                test.support.environment_altered = True
+                support.print_warning(f"multiprocessing.Manager still has "
+                                      f"{multiprocessing.active_children()} "
+                                      f"active children after {dt} seconds")
+                break
 
         gc.collect()                       # do garbage collection
         if cls.manager._number_of_objects() != 0:

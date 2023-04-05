@@ -195,25 +195,22 @@ class _UnixSelectorEventLoop(selector_events.BaseSelectorEventLoop):
     async def _make_subprocess_transport(self, protocol, args, shell,
                                          stdin, stdout, stderr, bufsize,
                                          extra=None, **kwargs):
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore', DeprecationWarning)
-            watcher = events.get_child_watcher()
-
-        with watcher:
+        with events.get_child_watcher() as watcher:
             if not watcher.is_active():
                 # Check early.
                 # Raising exception before process creation
                 # prevents subprocess execution if the watcher
                 # is not ready to handle it.
                 raise RuntimeError("asyncio.get_child_watcher() is not activated, "
-                                "subprocess support is not installed.")
+                                   "subprocess support is not installed.")
             waiter = self.create_future()
             transp = _UnixSubprocessTransport(self, protocol, args, shell,
-                                            stdin, stdout, stderr, bufsize,
-                                            waiter=waiter, extra=extra,
-                                            **kwargs)
+                                              stdin, stdout, stderr, bufsize,
+                                              waiter=waiter, extra=extra,
+                                              **kwargs)
+
             watcher.add_child_handler(transp.get_pid(),
-                                    self._child_watcher_callback, transp)
+                                      self._child_watcher_callback, transp)
             try:
                 await waiter
             except (SystemExit, KeyboardInterrupt):
@@ -846,13 +843,6 @@ class AbstractChildWatcher:
         waitpid(-1), there should be only one active object per process.
     """
 
-    def __init_subclass__(cls) -> None:
-        if cls.__module__ != __name__:
-            warnings._deprecated("AbstractChildWatcher",
-                             "{name!r} is deprecated as of Python 3.12 and will be "
-                             "removed in Python {remove}.",
-                              remove=(3, 14))
-
     def add_child_handler(self, pid, callback, *args):
         """Register a new child handler.
 
@@ -921,6 +911,10 @@ class PidfdChildWatcher(AbstractChildWatcher):
     recent (5.3+) kernels.
     """
 
+    def __init__(self):
+        self._loop = None
+        self._callbacks = {}
+
     def __enter__(self):
         return self
 
@@ -928,22 +922,35 @@ class PidfdChildWatcher(AbstractChildWatcher):
         pass
 
     def is_active(self):
-        return True
+        return self._loop is not None and self._loop.is_running()
 
     def close(self):
-        pass
+        self.attach_loop(None)
 
     def attach_loop(self, loop):
-        pass
+        if self._loop is not None and loop is None and self._callbacks:
+            warnings.warn(
+                'A loop is being detached '
+                'from a child watcher with pending handlers',
+                RuntimeWarning)
+        for pidfd, _, _ in self._callbacks.values():
+            self._loop._remove_reader(pidfd)
+            os.close(pidfd)
+        self._callbacks.clear()
+        self._loop = loop
 
     def add_child_handler(self, pid, callback, *args):
-        loop = events.get_running_loop()
-        pidfd = os.pidfd_open(pid)
-        loop._add_reader(pidfd, self._do_wait, pid, pidfd, callback, args)
+        existing = self._callbacks.get(pid)
+        if existing is not None:
+            self._callbacks[pid] = existing[0], callback, args
+        else:
+            pidfd = os.pidfd_open(pid)
+            self._loop._add_reader(pidfd, self._do_wait, pid)
+            self._callbacks[pid] = pidfd, callback, args
 
-    def _do_wait(self, pid, pidfd, callback, args):
-        loop = events.get_running_loop()
-        loop._remove_reader(pidfd)
+    def _do_wait(self, pid):
+        pidfd, callback, args = self._callbacks.pop(pid)
+        self._loop._remove_reader(pidfd)
         try:
             _, status = os.waitpid(pid, 0)
         except ChildProcessError:
@@ -961,9 +968,12 @@ class PidfdChildWatcher(AbstractChildWatcher):
         callback(pid, returncode, *args)
 
     def remove_child_handler(self, pid):
-        # asyncio never calls remove_child_handler() !!!
-        # The method is no-op but is implemented because
-        # abstract base classes require it.
+        try:
+            pidfd, _, _ = self._callbacks.pop(pid)
+        except KeyError:
+            return False
+        self._loop._remove_reader(pidfd)
+        os.close(pidfd)
         return True
 
 
@@ -1030,13 +1040,6 @@ class SafeChildWatcher(BaseChildWatcher):
     This is a safe solution but it has a significant overhead when handling a
     big number of children (O(n) each time SIGCHLD is raised)
     """
-
-    def __init__(self):
-        super().__init__()
-        warnings._deprecated("SafeChildWatcher",
-                             "{name!r} is deprecated as of Python 3.12 and will be "
-                             "removed in Python {remove}.",
-                              remove=(3, 14))
 
     def close(self):
         self._callbacks.clear()
@@ -1116,10 +1119,6 @@ class FastChildWatcher(BaseChildWatcher):
         self._lock = threading.Lock()
         self._zombies = {}
         self._forks = 0
-        warnings._deprecated("FastChildWatcher",
-                             "{name!r} is deprecated as of Python 3.12 and will be "
-                             "removed in Python {remove}.",
-                              remove=(3, 14))
 
     def close(self):
         self._callbacks.clear()
@@ -1232,10 +1231,6 @@ class MultiLoopChildWatcher(AbstractChildWatcher):
     def __init__(self):
         self._callbacks = {}
         self._saved_sighandler = None
-        warnings._deprecated("MultiLoopChildWatcher",
-                             "{name!r} is deprecated as of Python 3.12 and will be "
-                             "removed in Python {remove}.",
-                              remove=(3, 14))
 
     def is_active(self):
         return self._saved_sighandler is not None
@@ -1427,17 +1422,6 @@ class ThreadedChildWatcher(AbstractChildWatcher):
 
         self._threads.pop(expected_pid)
 
-def can_use_pidfd():
-    if not hasattr(os, 'pidfd_open'):
-        return False
-    try:
-        pid = os.getpid()
-        os.close(os.pidfd_open(pid, 0))
-    except OSError:
-        # blocked by security policy like SECCOMP
-        return False
-    return True
-
 
 class _UnixDefaultEventLoopPolicy(events.BaseDefaultEventLoopPolicy):
     """UNIX event loop policy with a watcher for child processes."""
@@ -1450,10 +1434,7 @@ class _UnixDefaultEventLoopPolicy(events.BaseDefaultEventLoopPolicy):
     def _init_watcher(self):
         with events._lock:
             if self._watcher is None:  # pragma: no branch
-                if can_use_pidfd():
-                    self._watcher = PidfdChildWatcher()
-                else:
-                    self._watcher = ThreadedChildWatcher()
+                self._watcher = ThreadedChildWatcher()
                 if threading.current_thread() is threading.main_thread():
                     self._watcher.attach_loop(self._local._loop)
 
@@ -1479,9 +1460,6 @@ class _UnixDefaultEventLoopPolicy(events.BaseDefaultEventLoopPolicy):
         if self._watcher is None:
             self._init_watcher()
 
-        warnings._deprecated("get_child_watcher",
-                            "{name!r} is deprecated as of Python 3.12 and will be "
-                            "removed in Python {remove}.", remove=(3, 14))
         return self._watcher
 
     def set_child_watcher(self, watcher):
@@ -1493,9 +1471,6 @@ class _UnixDefaultEventLoopPolicy(events.BaseDefaultEventLoopPolicy):
             self._watcher.close()
 
         self._watcher = watcher
-        warnings._deprecated("set_child_watcher",
-                            "{name!r} is deprecated as of Python 3.12 and will be "
-                            "removed in Python {remove}.", remove=(3, 14))
 
 
 SelectorEventLoop = _UnixSelectorEventLoop

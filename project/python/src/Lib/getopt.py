@@ -81,7 +81,7 @@ def getopt(args, shortopts, longopts = []):
     """
 
     opts = []
-    if isinstance(longopts, str):
+    if type(longopts) == type(""):
         longopts = [longopts]
     else:
         longopts = list(longopts)

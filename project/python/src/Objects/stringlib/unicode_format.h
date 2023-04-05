@@ -473,7 +473,8 @@ get_field_object(SubString *input, PyObject *args, PyObject *kwargs,
             goto error;
 
         /* assign to obj */
-        Py_SETREF(obj, tmp);
+        Py_DECREF(obj);
+        obj = tmp;
     }
     /* end of iterator, this is the non-error case */
     if (ok == 1)
@@ -824,7 +825,8 @@ output_markup(SubString *field_name, SubString *format_spec,
             goto done;
 
         /* do the assignment, transferring ownership: fieldobj = tmp */
-        Py_SETREF(fieldobj, tmp);
+        Py_DECREF(fieldobj);
+        fieldobj = tmp;
         tmp = NULL;
     }
 
@@ -1040,7 +1042,8 @@ formatteriter_next(formatteriterobject *it)
            otherwise create a one length string with the conversion
            character */
         if (conversion == '\0') {
-            conversion_str = Py_NewRef(Py_None);
+            conversion_str = Py_None;
+            Py_INCREF(conversion_str);
         }
         else
             conversion_str = PyUnicode_FromKindAndData(PyUnicode_4BYTE_KIND,
@@ -1118,7 +1121,8 @@ formatter_parser(PyObject *ignored, PyObject *self)
         return NULL;
 
     /* take ownership, give the object to the iterator */
-    it->str = Py_NewRef(self);
+    Py_INCREF(self);
+    it->str = self;
 
     /* initialize the contained MarkupIterator */
     MarkupIterator_init(&it->it_markup, (PyObject*)self, 0, PyUnicode_GET_LENGTH(self));
@@ -1261,7 +1265,8 @@ formatter_field_name_split(PyObject *ignored, PyObject *self)
 
     /* take ownership, give the object to the iterator.  this is
        just to keep the field_name alive */
-    it->str = Py_NewRef(self);
+    Py_INCREF(self);
+    it->str = self;
 
     /* Pass in auto_number = NULL. We'll return an empty string for
        first_obj in that case. */

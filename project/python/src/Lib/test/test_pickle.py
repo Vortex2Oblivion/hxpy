@@ -533,8 +533,6 @@ class CompatPickleTests(unittest.TestCase):
     def test_multiprocessing_exceptions(self):
         module = import_helper.import_module('multiprocessing.context')
         for name, exc in get_exceptions(module):
-            if issubclass(exc, Warning):
-                continue
             with self.subTest(name):
                 self.assertEqual(reverse_mapping('multiprocessing.context', name),
                                  ('multiprocessing', name))

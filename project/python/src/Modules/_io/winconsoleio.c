@@ -11,7 +11,7 @@
 #include "pycore_fileutils.h"     // _Py_BEGIN_SUPPRESS_IPH
 #include "pycore_object.h"        // _PyObject_GC_UNTRACK()
 
-#ifdef HAVE_WINDOWS_CONSOLE_IO
+#ifdef MS_WINDOWS
 
 #include "structmember.h"         // PyMemberDef
 #ifdef HAVE_SYS_TYPES_H
@@ -22,9 +22,7 @@
 #endif
 #include <stddef.h> /* For offsetof */
 
-#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
-#endif
 #include <windows.h>
 #include <fcntl.h>
 
@@ -194,7 +192,7 @@ _io__WindowsConsoleIO_close_impl(winconsoleio *self)
 /*[clinic end generated code: output=27ef95b66c29057b input=68c4e5754f8136c2]*/
 {
     PyObject *res;
-    PyObject *exc;
+    PyObject *exc, *val, *tb;
     int rc;
     res = PyObject_CallMethodOneArg((PyObject*)&PyRawIOBase_Type,
                                     &_Py_ID(close), (PyObject*)self);
@@ -202,16 +200,13 @@ _io__WindowsConsoleIO_close_impl(winconsoleio *self)
         self->fd = -1;
         return res;
     }
-    if (res == NULL) {
-        exc = PyErr_GetRaisedException();
-    }
+    if (res == NULL)
+        PyErr_Fetch(&exc, &val, &tb);
     rc = internal_close(self);
-    if (res == NULL) {
-        _PyErr_ChainExceptions1(exc);
-    }
-    if (rc < 0) {
+    if (res == NULL)
+        _PyErr_ChainExceptions(exc, val, tb);
+    if (rc < 0)
         Py_CLEAR(res);
-    }
     return res;
 }
 
@@ -240,7 +235,7 @@ winconsoleio_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 _io._WindowsConsoleIO.__init__
     file as nameobj: object
     mode: str = "r"
-    closefd: bool = True
+    closefd: bool(accept={int}) = True
     opener: object = None
 
 Open a console buffer by file descriptor.
@@ -254,7 +249,7 @@ static int
 _io__WindowsConsoleIO___init___impl(winconsoleio *self, PyObject *nameobj,
                                     const char *mode, int closefd,
                                     PyObject *opener)
-/*[clinic end generated code: output=3fd9cbcdd8d95429 input=7a3eed6bbe998fd9]*/
+/*[clinic end generated code: output=3fd9cbcdd8d95429 input=06ae4b863c63244b]*/
 {
     const char *s;
     wchar_t *name = NULL;
@@ -265,7 +260,7 @@ _io__WindowsConsoleIO___init___impl(winconsoleio *self, PyObject *nameobj,
     int fd_is_own = 0;
     HANDLE handle = NULL;
 
-    assert(PyObject_TypeCheck(self, (PyTypeObject *)&PyWindowsConsoleIO_Type));
+    assert(PyWindowsConsoleIO_Check(self));
     if (self->fd >= 0) {
         if (self->closefd) {
             /* Have to close the existing file first. */
@@ -1179,4 +1174,6 @@ PyTypeObject PyWindowsConsoleIO_Type = {
     0,                                          /* tp_finalize */
 };
 
-#endif /* HAVE_WINDOWS_CONSOLE_IO */
+PyObject * _PyWindowsConsoleIO_Type = (PyObject*)&PyWindowsConsoleIO_Type;
+
+#endif /* MS_WINDOWS */

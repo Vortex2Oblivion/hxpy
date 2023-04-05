@@ -43,7 +43,7 @@ class HTTPError(URLError, urllib.response.addinfourl):
         self.fp = fp
         self.filename = url
         if fp is None:
-            fp = io.BytesIO()
+            fp = io.StringIO()
         self.__super_init(fp, hdrs, url, code)
 
     def __str__(self):

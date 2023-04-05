@@ -159,7 +159,8 @@ unicodedata_UCD_decimal_impl(PyObject *self, int chr,
             return NULL;
         }
         else {
-            return Py_NewRef(default_value);
+            Py_INCREF(default_value);
+            return default_value;
         }
     }
     return PyLong_FromLong(rc);
@@ -193,7 +194,8 @@ unicodedata_UCD_digit_impl(PyObject *self, int chr, PyObject *default_value)
             return NULL;
         }
         else {
-            return Py_NewRef(default_value);
+            Py_INCREF(default_value);
+            return default_value;
         }
     }
     return PyLong_FromLong(rc);
@@ -244,7 +246,8 @@ unicodedata_UCD_numeric_impl(PyObject *self, int chr,
             return NULL;
         }
         else {
-            return Py_NewRef(default_value);
+            Py_INCREF(default_value);
+            return default_value;
         }
     }
     return PyFloat_FromDouble(rc);
@@ -914,7 +917,8 @@ unicodedata_UCD_is_normalized_impl(PyObject *self, PyObject *form,
         result = (m == YES) ? Py_True : Py_False;
     }
 
-    return Py_NewRef(result);
+    Py_INCREF(result);
+    return result;
 }
 
 
@@ -939,34 +943,39 @@ unicodedata_UCD_normalize_impl(PyObject *self, PyObject *form,
     if (PyUnicode_GET_LENGTH(input) == 0) {
         /* Special case empty input strings, since resizing
            them  later would cause internal errors. */
-        return Py_NewRef(input);
+        Py_INCREF(input);
+        return input;
     }
 
     if (PyUnicode_CompareWithASCIIString(form, "NFC") == 0) {
         if (is_normalized_quickcheck(self, input,
                                      true,  false, true) == YES) {
-            return Py_NewRef(input);
+            Py_INCREF(input);
+            return input;
         }
         return nfc_nfkc(self, input, 0);
     }
     if (PyUnicode_CompareWithASCIIString(form, "NFKC") == 0) {
         if (is_normalized_quickcheck(self, input,
                                      true,  true,  true) == YES) {
-            return Py_NewRef(input);
+            Py_INCREF(input);
+            return input;
         }
         return nfc_nfkc(self, input, 1);
     }
     if (PyUnicode_CompareWithASCIIString(form, "NFD") == 0) {
         if (is_normalized_quickcheck(self, input,
                                      false, false, true) == YES) {
-            return Py_NewRef(input);
+            Py_INCREF(input);
+            return input;
         }
         return nfd_nfkd(self, input, 0);
     }
     if (PyUnicode_CompareWithASCIIString(form, "NFKD") == 0) {
         if (is_normalized_quickcheck(self, input,
                                      false, true,  true) == YES) {
-            return Py_NewRef(input);
+            Py_INCREF(input);
+            return input;
         }
         return nfd_nfkd(self, input, 1);
     }
@@ -1037,12 +1046,11 @@ is_unified_ideograph(Py_UCS4 code)
         (0x3400 <= code && code <= 0x4DBF)   || /* CJK Ideograph Extension A */
         (0x4E00 <= code && code <= 0x9FFF)   || /* CJK Ideograph */
         (0x20000 <= code && code <= 0x2A6DF) || /* CJK Ideograph Extension B */
-        (0x2A700 <= code && code <= 0x2B739) || /* CJK Ideograph Extension C */
+        (0x2A700 <= code && code <= 0x2B738) || /* CJK Ideograph Extension C */
         (0x2B740 <= code && code <= 0x2B81D) || /* CJK Ideograph Extension D */
         (0x2B820 <= code && code <= 0x2CEA1) || /* CJK Ideograph Extension E */
         (0x2CEB0 <= code && code <= 0x2EBE0) || /* CJK Ideograph Extension F */
-        (0x30000 <= code && code <= 0x3134A) || /* CJK Ideograph Extension G */
-        (0x31350 <= code && code <= 0x323AF);   /* CJK Ideograph Extension H */
+        (0x30000 <= code && code <= 0x3134A);   /* CJK Ideograph Extension G */
 }
 
 /* macros used to determine if the given code point is in the PUA range that
@@ -1361,7 +1369,8 @@ unicodedata_UCD_name_impl(PyObject *self, int chr, PyObject *default_value)
             return NULL;
         }
         else {
-            return Py_NewRef(default_value);
+            Py_INCREF(default_value);
+            return default_value;
         }
     }
 

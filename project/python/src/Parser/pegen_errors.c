@@ -164,10 +164,11 @@ _PyPegen_tokenize_full_source_to_check_for_errors(Parser *p) {
     Py_ssize_t current_err_line = current_token->lineno;
 
     int ret = 0;
-    struct token new_token;
 
     for (;;) {
-        switch (_PyTokenizer_Get(p->tok, &new_token)) {
+        const char *start;
+        const char *end;
+        switch (_PyTokenizer_Get(p->tok, &start, &end)) {
             case ERRORTOKEN:
                 if (PyErr_Occurred()) {
                     ret = -1;
@@ -248,7 +249,7 @@ get_error_line_from_tokenizer_buffers(Parser *p, Py_ssize_t lineno)
      * (multi-line) statement are stored in p->tok->interactive_src_start.
      * If not, we're parsing from a string, which means that the whole source
      * is stored in p->tok->str. */
-    assert((p->tok->fp == NULL && p->tok->str != NULL) || p->tok->fp != NULL);
+    assert((p->tok->fp == NULL && p->tok->str != NULL) || p->tok->fp == stdin);
 
     char *cur_line = p->tok->fp_interactive ? p->tok->interactive_src_start : p->tok->str;
     if (cur_line == NULL) {

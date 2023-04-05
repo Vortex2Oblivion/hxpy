@@ -292,13 +292,17 @@ class Tokenizer:
             msg = msg.encode('ascii', 'backslashreplace').decode('ascii')
         return error(msg, self.string, self.tell() - offset)
 
-    def checkgroupname(self, name, offset):
-        if not (self.istext or name.isascii()):
-            msg = "bad character in group name %a" % name
-            raise self.error(msg, len(name) + offset)
+    def checkgroupname(self, name, offset, nested):
         if not name.isidentifier():
             msg = "bad character in group name %r" % name
             raise self.error(msg, len(name) + offset)
+        if not (self.istext or name.isascii()):
+            import warnings
+            warnings.warn(
+                "bad character in group name %a at position %d" %
+                (name, self.tell() - len(name) - offset),
+                DeprecationWarning, stacklevel=nested + 7
+            )
 
 def _class_escape(source, escape):
     # handle escape code inside character class
@@ -714,11 +718,11 @@ def _parse(source, state, verbose, nested, first=False):
                     if sourcematch("<"):
                         # named group: skip forward to end of name
                         name = source.getuntil(">", "group name")
-                        source.checkgroupname(name, 1)
+                        source.checkgroupname(name, 1, nested)
                     elif sourcematch("="):
                         # named backreference
                         name = source.getuntil(")", "group name")
-                        source.checkgroupname(name, 1)
+                        source.checkgroupname(name, 1, nested)
                         gid = state.groupdict.get(name)
                         if gid is None:
                             msg = "unknown group name %r" % name
@@ -779,14 +783,20 @@ def _parse(source, state, verbose, nested, first=False):
                 elif char == "(":
                     # conditional backreference group
                     condname = source.getuntil(")", "group name")
-                    if not (condname.isdecimal() and condname.isascii()):
-                        source.checkgroupname(condname, 1)
+                    if condname.isidentifier():
+                        source.checkgroupname(condname, 1, nested)
                         condgroup = state.groupdict.get(condname)
                         if condgroup is None:
                             msg = "unknown group name %r" % condname
                             raise source.error(msg, len(condname) + 1)
                     else:
-                        condgroup = int(condname)
+                        try:
+                            condgroup = int(condname)
+                            if condgroup < 0:
+                                raise ValueError
+                        except ValueError:
+                            msg = "bad character in group name %r" % condname
+                            raise source.error(msg, len(condname) + 1) from None
                         if not condgroup:
                             raise source.error("bad group number",
                                                len(condname) + 1)
@@ -984,28 +994,24 @@ def parse(str, flags=0, state=None):
 
     return p
 
-def parse_template(source, pattern):
+def parse_template(source, state):
     # parse 're' replacement string into list of literals and
     # group references
     s = Tokenizer(source)
     sget = s.get
-    result = []
+    groups = []
+    literals = []
     literal = []
     lappend = literal.append
-    def addliteral():
-        if s.istext:
-            result.append(''.join(literal))
-        else:
-            # The tokenizer implicitly decodes bytes objects as latin-1, we must
-            # therefore re-encode the final representation.
-            result.append(''.join(literal).encode('latin-1'))
-        del literal[:]
     def addgroup(index, pos):
-        if index > pattern.groups:
+        if index > state.groups:
             raise s.error("invalid group reference %d" % index, pos)
-        addliteral()
-        result.append(index)
-    groupindex = pattern.groupindex
+        if literal:
+            literals.append(''.join(literal))
+            del literal[:]
+        groups.append((len(literals), index))
+        literals.append(None)
+    groupindex = state.groupindex
     while True:
         this = sget()
         if this is None:
@@ -1017,14 +1023,20 @@ def parse_template(source, pattern):
                 if not s.match("<"):
                     raise s.error("missing <")
                 name = s.getuntil(">", "group name")
-                if not (name.isdecimal() and name.isascii()):
-                    s.checkgroupname(name, 1)
+                if name.isidentifier():
+                    s.checkgroupname(name, 1, -1)
                     try:
                         index = groupindex[name]
                     except KeyError:
                         raise IndexError("unknown group name %r" % name) from None
                 else:
-                    index = int(name)
+                    try:
+                        index = int(name)
+                        if index < 0:
+                            raise ValueError
+                    except ValueError:
+                        raise s.error("bad character in group name %r" % name,
+                                      len(name) + 1) from None
                     if index >= MAXGROUPS:
                         raise s.error("invalid group reference %d" % index,
                                       len(name) + 1)
@@ -1067,5 +1079,22 @@ def parse_template(source, pattern):
                 lappend(this)
         else:
             lappend(this)
-    addliteral()
-    return result
+    if literal:
+        literals.append(''.join(literal))
+    if not isinstance(source, str):
+        # The tokenizer implicitly decodes bytes objects as latin-1, we must
+        # therefore re-encode the final representation.
+        literals = [None if s is None else s.encode('latin-1') for s in literals]
+    return groups, literals
+
+def expand_template(template, match):
+    g = match.group
+    empty = match.string[:0]
+    groups, literals = template
+    literals = literals[:]
+    try:
+        for index, group in groups:
+            literals[index] = g(group) or empty
+    except IndexError:
+        raise error("invalid group reference %d" % index) from None
+    return empty.join(literals)

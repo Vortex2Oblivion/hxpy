@@ -49,7 +49,10 @@ class Parser:
         feedparser = FeedParser(self._class, policy=self.policy)
         if headersonly:
             feedparser._set_headersonly()
-        while data := fp.read(8192):
+        while True:
+            data = fp.read(8192)
+            if not data:
+                break
             feedparser.feed(data)
         return feedparser.close()
 
@@ -64,6 +67,7 @@ class Parser:
         return self.parse(StringIO(text), headersonly=headersonly)
 
 
+
 class HeaderParser(Parser):
     def parse(self, fp, headersonly=True):
         return Parser.parse(self, fp, True)
@@ -71,7 +75,7 @@ class HeaderParser(Parser):
     def parsestr(self, text, headersonly=True):
         return Parser.parsestr(self, text, True)
 
-
+
 class BytesParser:
 
     def __init__(self, *args, **kw):

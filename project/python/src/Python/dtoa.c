@@ -119,7 +119,6 @@
 
 #include "Python.h"
 #include "pycore_dtoa.h"          // _PY_SHORT_FLOAT_REPR
-#include "pycore_pystate.h"       // _PyInterpreterState_GET()
 #include <stdlib.h>               // exit()
 
 /* if _PY_SHORT_FLOAT_REPR == 0, then don't even try to compile
@@ -157,7 +156,7 @@
 #endif
 
 
-// ULong is defined in pycore_dtoa.h.
+typedef uint32_t ULong;
 typedef int32_t Long;
 typedef uint64_t ULLong;
 
@@ -171,6 +170,12 @@ typedef uint64_t ULLong;
 #ifdef DEBUG
 #define Bug(x) {fprintf(stderr, "%s\n", x); exit(1);}
 #endif
+
+#ifndef PRIVATE_MEM
+#define PRIVATE_MEM 2304
+#endif
+#define PRIVATE_mem ((PRIVATE_MEM+sizeof(double)-1)/sizeof(double))
+static double private_mem[PRIVATE_mem], *pmem_next = private_mem;
 
 #ifdef __cplusplus
 extern "C" {
@@ -293,6 +298,8 @@ BCinfo {
 
 #define FFFFFFFF 0xffffffffUL
 
+#define Kmax 7
+
 /* struct Bigint is used to represent arbitrary-precision integers.  These
    integers are stored in sign-magnitude format, with the magnitude stored as
    an array of base 2**32 digits.  Bigints are always normalized: if x is a
@@ -315,7 +322,13 @@ BCinfo {
        significant (x[0]) to most significant (x[wds-1]).
 */
 
-// struct Bigint is defined in pycore_dtoa.h.
+struct
+Bigint {
+    struct Bigint *next;
+    int k, maxwds, sign, wds;
+    ULong x[1];
+};
+
 typedef struct Bigint Bigint;
 
 #ifndef Py_USING_MEMORY_DEBUGGER
@@ -339,9 +352,7 @@ typedef struct Bigint Bigint;
    Bfree to PyMem_Free.  Investigate whether this has any significant
    performance on impact. */
 
-#define freelist interp->dtoa.freelist
-#define private_mem interp->dtoa.preallocated
-#define pmem_next interp->dtoa.preallocated_next
+static Bigint *freelist[Kmax+1];
 
 /* Allocate space for a Bigint with up to 1<<k digits */
 
@@ -351,17 +362,14 @@ Balloc(int k)
     int x;
     Bigint *rv;
     unsigned int len;
-    PyInterpreterState *interp = _PyInterpreterState_GET();
 
-    if (k <= Bigint_Kmax && (rv = freelist[k]))
+    if (k <= Kmax && (rv = freelist[k]))
         freelist[k] = rv->next;
     else {
         x = 1 << k;
         len = (sizeof(Bigint) + (x-1)*sizeof(ULong) + sizeof(double) - 1)
             /sizeof(double);
-        if (k <= Bigint_Kmax &&
-            pmem_next - private_mem + len <= (Py_ssize_t)Bigint_PREALLOC_SIZE
-        ) {
+        if (k <= Kmax && pmem_next - private_mem + len <= (Py_ssize_t)PRIVATE_mem) {
             rv = (Bigint*)pmem_next;
             pmem_next += len;
         }
@@ -383,19 +391,14 @@ static void
 Bfree(Bigint *v)
 {
     if (v) {
-        if (v->k > Bigint_Kmax)
+        if (v->k > Kmax)
             FREE((void*)v);
         else {
-            PyInterpreterState *interp = _PyInterpreterState_GET();
             v->next = freelist[v->k];
             freelist[v->k] = v;
         }
     }
 }
-
-#undef pmem_next
-#undef private_mem
-#undef freelist
 
 #else
 
@@ -675,6 +678,10 @@ mult(Bigint *a, Bigint *b)
 
 #ifndef Py_USING_MEMORY_DEBUGGER
 
+/* p5s is a linked list of powers of 5 of the form 5**(2**i), i >= 2 */
+
+static Bigint *p5s;
+
 /* multiply the Bigint b by 5**k.  Returns a pointer to the result, or NULL on
    failure; if the returned pointer is distinct from b then the original
    Bigint b will have been Bfree'd.   Ignores the sign of b. */
@@ -694,8 +701,7 @@ pow5mult(Bigint *b, int k)
 
     if (!(k >>= 2))
         return b;
-    PyInterpreterState *interp = _PyInterpreterState_GET();
-    p5 = interp->dtoa.p5s;
+    p5 = p5s;
     if (!p5) {
         /* first time */
         p5 = i2b(625);
@@ -703,7 +709,7 @@ pow5mult(Bigint *b, int k)
             Bfree(b);
             return NULL;
         }
-        interp->dtoa.p5s = p5;
+        p5s = p5;
         p5->next = 0;
     }
     for(;;) {

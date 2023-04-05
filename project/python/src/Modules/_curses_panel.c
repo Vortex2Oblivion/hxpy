@@ -261,7 +261,8 @@ PyCursesPanel_New(_curses_panel_state *state, PANEL *pan,
         Py_DECREF(po);
         return NULL;
     }
-    po->wo = (PyCursesWindowObject*)Py_NewRef(wo);
+    po->wo = wo;
+    Py_INCREF(wo);
     return (PyObject *)po;
 }
 
@@ -312,7 +313,8 @@ _curses_panel_panel_above_impl(PyCursesPanelObject *self)
                         "panel_above: can't find Panel Object");
         return NULL;
     }
-    return Py_NewRef(po);
+    Py_INCREF(po);
+    return (PyObject *)po;
 }
 
 /* panel_below(NULL) returns the top panel in the stack. To get
@@ -342,7 +344,8 @@ _curses_panel_panel_below_impl(PyCursesPanelObject *self)
                         "panel_below: can't find Panel Object");
         return NULL;
     }
-    return Py_NewRef(po);
+    Py_INCREF(po);
+    return (PyObject *)po;
 }
 
 /*[clinic input]
@@ -391,7 +394,8 @@ static PyObject *
 _curses_panel_panel_window_impl(PyCursesPanelObject *self)
 /*[clinic end generated code: output=5f05940d4106b4cb input=6067353d2c307901]*/
 {
-    return Py_NewRef(self->wo);
+    Py_INCREF(self->wo);
+    return (PyObject *)self->wo;
 }
 
 /*[clinic input]
@@ -424,7 +428,8 @@ _curses_panel_panel_replace_impl(PyCursesPanelObject *self,
         PyErr_SetString(state->PyCursesError, "replace_panel() returned ERR");
         return NULL;
     }
-    Py_SETREF(po->wo, (PyCursesWindowObject*)Py_NewRef(win));
+    Py_INCREF(win);
+    Py_SETREF(po->wo, win);
     Py_RETURN_NONE;
 }
 
@@ -481,7 +486,8 @@ _curses_panel_panel_userptr_impl(PyCursesPanelObject *self,
         return NULL;
     }
 
-    return Py_NewRef(obj);
+    Py_INCREF(obj);
+    return obj;
 }
 
 
@@ -549,7 +555,8 @@ _curses_panel_bottom_panel_impl(PyObject *module)
                         "panel_above: can't find Panel Object");
         return NULL;
     }
-    return Py_NewRef(po);
+    Py_INCREF(po);
+    return (PyObject *)po;
 }
 
 /*[clinic input]
@@ -607,7 +614,8 @@ _curses_panel_top_panel_impl(PyObject *module)
                         "panel_below: can't find Panel Object");
         return NULL;
     }
-    return Py_NewRef(po);
+    Py_INCREF(po);
+    return (PyObject *)po;
 }
 
 /*[clinic input]
@@ -662,7 +670,8 @@ _curses_panel_exec(PyObject *mod)
     state->PyCursesError = PyErr_NewException(
         "_curses_panel.error", NULL, NULL);
 
-    if (PyModule_AddObject(mod, "error", Py_NewRef(state->PyCursesError)) < 0) {
+    Py_INCREF(state->PyCursesError);
+    if (PyModule_AddObject(mod, "error", state->PyCursesError) < 0) {
         Py_DECREF(state->PyCursesError);
         return -1;
     }

@@ -160,7 +160,7 @@ def _write_u32(file, x):
 class Au_read:
 
     def __init__(self, f):
-        if isinstance(f, str):
+        if type(f) == type(''):
             import builtins
             f = builtins.open(f, 'rb')
             self._opened = True
@@ -312,7 +312,7 @@ class Au_read:
 class Au_write:
 
     def __init__(self, f):
-        if isinstance(f, str):
+        if type(f) == type(''):
             import builtins
             f = builtins.open(f, 'wb')
             self._opened = True

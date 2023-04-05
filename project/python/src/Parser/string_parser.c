@@ -21,16 +21,9 @@ warn_invalid_escape_sequence(Parser *p, const char *first_invalid_escape, Token 
     if (msg == NULL) {
         return -1;
     }
-    PyObject *category;
-    if (p->feature_version >= 12) {
-        category = PyExc_SyntaxWarning;
-    }
-    else {
-        category = PyExc_DeprecationWarning;
-    }
-    if (PyErr_WarnExplicitObject(category, msg, p->tok->filename,
+    if (PyErr_WarnExplicitObject(PyExc_DeprecationWarning, msg, p->tok->filename,
                                  t->lineno, NULL, NULL) < 0) {
-        if (PyErr_ExceptionMatches(category)) {
+        if (PyErr_ExceptionMatches(PyExc_DeprecationWarning)) {
             /* Replace the DeprecationWarning exception with a SyntaxError
                to get a more accurate error report */
             PyErr_Clear();
@@ -417,7 +410,9 @@ fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end,
         PyMem_Free(str);
         return NULL;
     }
-    tok->filename = Py_NewRef(p->tok->filename);
+    Py_INCREF(p->tok->filename);
+
+    tok->filename = p->tok->filename;
     tok->lineno = t->lineno + lines - 1;
 
     Parser *p2 = _PyPegen_Parser_New(tok, Py_fstring_input, p->flags, p->feature_version,
@@ -777,43 +772,27 @@ fstring_find_expr(Parser *p, const char **str, const char *end, int raw, int rec
     /* Check for a conversion char, if present. */
     if (**str == '!') {
         *str += 1;
-        const char *conv_start = *str;
-        while (1) {
-            if (*str >= end) {
-                goto unexpected_end_of_string;
-            }
-            if (**str == '}' || **str == ':') {
-                break;
-            }
-            *str += 1;
-        }
-        if (*str == conv_start) {
-            RAISE_SYNTAX_ERROR(
-                      "f-string: missed conversion character");
-            goto error;
+        if (*str >= end) {
+            goto unexpected_end_of_string;
         }
 
-        conversion = (unsigned char)*conv_start;
+        conversion = (unsigned char)**str;
+        *str += 1;
+
         /* Validate the conversion. */
-        if ((*str != conv_start + 1) ||
-            !(conversion == 's' || conversion == 'r' || conversion == 'a'))
-        {
-            PyObject *conv_obj = PyUnicode_FromStringAndSize(conv_start,
-                                                             *str-conv_start);
-            if (conv_obj) {
-                RAISE_SYNTAX_ERROR(
-                        "f-string: invalid conversion character %R: "
-                        "expected 's', 'r', or 'a'",
-                        conv_obj);
-                Py_DECREF(conv_obj);
-            }
+        if (!(conversion == 's' || conversion == 'r' || conversion == 'a')) {
+            RAISE_SYNTAX_ERROR(
+                      "f-string: invalid conversion character: "
+                      "expected 's', 'r', or 'a'");
             goto error;
         }
 
     }
 
     /* Check for the format spec, if present. */
-    assert(*str < end);
+    if (*str >= end) {
+        goto unexpected_end_of_string;
+    }
     if (**str == ':') {
         *str += 1;
         if (*str >= end) {

@@ -153,7 +153,7 @@ class ClinicGroupPermuterTest(TestCase):
     def test_have_left_options_but_required_is_empty(self):
         def fn():
             clinic.permute_optional_groups(['a'], [], [])
-        self.assertRaises(ValueError, fn)
+        self.assertRaises(AssertionError, fn)
 
 
 class ClinicLinearFormatTest(TestCase):

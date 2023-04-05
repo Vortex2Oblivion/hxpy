@@ -54,9 +54,7 @@
 
  */
 
-#ifndef Py_BUILD_CORE_BUILTIN
-#  define Py_BUILD_CORE_MODULE 1
-#endif
+#define NEEDS_PY_IDENTIFIER
 
 #include "Python.h"
 #include "structmember.h"         // PyMemberDef
@@ -67,7 +65,7 @@
 #include <windows.h>
 #include <tchar.h>
 #else
-#include <dlfcn.h>
+#include "ctypes_dlfcn.h"
 #endif
 
 #ifdef __APPLE__
@@ -95,9 +93,6 @@
 */
 #define DONT_USE_SEH
 #endif
-
-#include "pycore_runtime.h"         // _PyRuntime
-#include "pycore_global_objects.h"  // _Py_ID()
 
 #define CTYPES_CAPSULE_NAME_PYMEM "_ctypes pymem"
 
@@ -286,7 +281,7 @@ static WCHAR *FormatError(DWORD code)
 #ifndef DONT_USE_SEH
 static void SetException(DWORD code, EXCEPTION_RECORD *pr)
 {
-    if (PySys_Audit("ctypes.set_exception", "I", code) < 0) {
+    if (PySys_Audit("ctypes.seh_exception", "I", code) < 0) {
         /* An exception was set by the audit hook */
         return;
     }
@@ -672,7 +667,8 @@ static int ConvParam(PyObject *obj, Py_ssize_t index, struct argument *pa)
     if (PyCArg_CheckExact(obj)) {
         PyCArgObject *carg = (PyCArgObject *)obj;
         pa->ffi_type = carg->pffi_type;
-        pa->keep = Py_NewRef(obj);
+        Py_INCREF(obj);
+        pa->keep = obj;
         memcpy(&pa->value, &carg->value, sizeof(pa->value));
         return 0;
     }
@@ -702,7 +698,8 @@ static int ConvParam(PyObject *obj, Py_ssize_t index, struct argument *pa)
     if (PyBytes_Check(obj)) {
         pa->ffi_type = &ffi_type_pointer;
         pa->value.p = PyBytes_AsString(obj);
-        pa->keep = Py_NewRef(obj);
+        Py_INCREF(obj);
+        pa->keep = obj;
         return 0;
     }
 
@@ -720,8 +717,9 @@ static int ConvParam(PyObject *obj, Py_ssize_t index, struct argument *pa)
     }
 
     {
+        _Py_IDENTIFIER(_as_parameter_);
         PyObject *arg;
-        if (_PyObject_LookupAttr(obj, &_Py_ID(_as_parameter_), &arg) < 0) {
+        if (_PyObject_LookupAttrId(obj, &PyId__as_parameter_, &arg) < 0) {
             return -1;
         }
         /* Which types should we exactly allow here?
@@ -1013,43 +1011,41 @@ static PyObject *GetResult(PyObject *restype, void *result, PyObject *checker)
 void _ctypes_extend_error(PyObject *exc_class, const char *fmt, ...)
 {
     va_list vargs;
+    PyObject *tp, *v, *tb, *s, *cls_str, *msg_str;
 
     va_start(vargs, fmt);
-    PyObject *s = PyUnicode_FromFormatV(fmt, vargs);
+    s = PyUnicode_FromFormatV(fmt, vargs);
     va_end(vargs);
-    if (s == NULL) {
+    if (!s)
         return;
-    }
 
-    assert(PyErr_Occurred());
-    PyObject *exc = PyErr_GetRaisedException();
-    assert(exc != NULL);
-    PyObject *cls_str = PyType_GetName(Py_TYPE(exc));
+    PyErr_Fetch(&tp, &v, &tb);
+    PyErr_NormalizeException(&tp, &v, &tb);
+    if (PyType_Check(tp))
+        cls_str = PyType_GetName((PyTypeObject *)tp);
+    else
+        cls_str = PyObject_Str(tp);
     if (cls_str) {
         PyUnicode_AppendAndDel(&s, cls_str);
         PyUnicode_AppendAndDel(&s, PyUnicode_FromString(": "));
-        if (s == NULL) {
+        if (s == NULL)
             goto error;
-        }
-    }
-    else {
+    } else
         PyErr_Clear();
-    }
-
-    PyObject *msg_str = PyObject_Str(exc);
-    if (msg_str) {
+    msg_str = PyObject_Str(v);
+    if (msg_str)
         PyUnicode_AppendAndDel(&s, msg_str);
-    }
     else {
         PyErr_Clear();
         PyUnicode_AppendAndDel(&s, PyUnicode_FromString("???"));
     }
-    if (s == NULL) {
+    if (s == NULL)
         goto error;
-    }
     PyErr_SetObject(exc_class, s);
 error:
-    Py_XDECREF(exc);
+    Py_XDECREF(tp);
+    Py_XDECREF(v);
+    Py_XDECREF(tb);
     Py_XDECREF(s);
 }
 
@@ -1539,10 +1535,10 @@ static PyObject *py_dl_open(PyObject *self, PyObject *args)
     if (PySys_Audit("ctypes.dlopen", "O", name) < 0) {
         return NULL;
     }
-    handle = dlopen(name_str, mode);
+    handle = ctypes_dlopen(name_str, mode);
     Py_XDECREF(name2);
     if (!handle) {
-        const char *errmsg = dlerror();
+        const char *errmsg = ctypes_dlerror();
         if (!errmsg)
             errmsg = "dlopen() error";
         PyErr_SetString(PyExc_OSError,
@@ -1560,7 +1556,7 @@ static PyObject *py_dl_close(PyObject *self, PyObject *args)
         return NULL;
     if (dlclose(handle)) {
         PyErr_SetString(PyExc_OSError,
-                               dlerror());
+                               ctypes_dlerror());
         return NULL;
     }
     Py_RETURN_NONE;
@@ -1578,10 +1574,10 @@ static PyObject *py_dl_sym(PyObject *self, PyObject *args)
     if (PySys_Audit("ctypes.dlsym/handle", "O", args) < 0) {
         return NULL;
     }
-    ptr = dlsym((void*)handle, name);
+    ptr = ctypes_dlsym((void*)handle, name);
     if (!ptr) {
         PyErr_SetString(PyExc_OSError,
-                               dlerror());
+                               ctypes_dlerror());
         return NULL;
     }
     return PyLong_FromVoidPtr(ptr);
@@ -1743,7 +1739,8 @@ byref(PyObject *self, PyObject *args)
 
     parg->tag = 'P';
     parg->pffi_type = &ffi_type_pointer;
-    parg->obj = Py_NewRef(obj);
+    Py_INCREF(obj);
+    parg->obj = obj;
     parg->value.p = (char *)((CDataObject *)obj)->b_ptr + offset;
     return (PyObject *)parg;
 }
@@ -1783,7 +1780,8 @@ My_PyObj_FromPtr(PyObject *self, PyObject *args)
     if (PySys_Audit("ctypes.PyObj_FromPtr", "(O)", ob) < 0) {
         return NULL;
     }
-    return Py_NewRef(ob);
+    Py_INCREF(ob);
+    return ob;
 }
 
 static PyObject *
@@ -1860,14 +1858,16 @@ static PyObject *
 unpickle(PyObject *self, PyObject *args)
 {
     PyObject *typ, *state, *meth, *obj, *result;
+    _Py_IDENTIFIER(__new__);
+    _Py_IDENTIFIER(__setstate__);
 
     if (!PyArg_ParseTuple(args, "OO!", &typ, &PyTuple_Type, &state))
         return NULL;
-    obj = PyObject_CallMethodOneArg(typ, &_Py_ID(__new__), typ);
+    obj = _PyObject_CallMethodIdOneArg(typ, &PyId___new__, typ);
     if (obj == NULL)
         return NULL;
 
-    meth = PyObject_GetAttr(obj, &_Py_ID(__setstate__));
+    meth = _PyObject_GetAttrId(obj, &PyId___setstate__);
     if (meth == NULL) {
         goto error;
     }
@@ -1892,20 +1892,29 @@ POINTER(PyObject *self, PyObject *cls)
     PyObject *result;
     PyTypeObject *typ;
     PyObject *key;
+    char *buf;
 
     result = PyDict_GetItemWithError(_ctypes_ptrtype_cache, cls);
     if (result) {
-        return Py_NewRef(result);
+        Py_INCREF(result);
+        return result;
     }
     else if (PyErr_Occurred()) {
         return NULL;
     }
     if (PyUnicode_CheckExact(cls)) {
-        PyObject *name = PyUnicode_FromFormat("LP_%U", cls);
+        const char *name = PyUnicode_AsUTF8(cls);
+        if (name == NULL)
+            return NULL;
+        buf = PyMem_Malloc(strlen(name) + 3 + 1);
+        if (buf == NULL)
+            return PyErr_NoMemory();
+        sprintf(buf, "LP_%s", name);
         result = PyObject_CallFunction((PyObject *)Py_TYPE(&PyCPointer_Type),
-                                       "N(O){}",
-                                       name,
+                                       "s(O){}",
+                                       buf,
                                        &PyCPointer_Type);
+        PyMem_Free(buf);
         if (result == NULL)
             return result;
         key = PyLong_FromVoidPtr(result);
@@ -1915,15 +1924,20 @@ POINTER(PyObject *self, PyObject *cls)
         }
     } else if (PyType_Check(cls)) {
         typ = (PyTypeObject *)cls;
-        PyObject *name = PyUnicode_FromFormat("LP_%s", typ->tp_name);
+        buf = PyMem_Malloc(strlen(typ->tp_name) + 3 + 1);
+        if (buf == NULL)
+            return PyErr_NoMemory();
+        sprintf(buf, "LP_%s", typ->tp_name);
         result = PyObject_CallFunction((PyObject *)Py_TYPE(&PyCPointer_Type),
-                                       "N(O){sO}",
-                                       name,
+                                       "s(O){sO}",
+                                       buf,
                                        &PyCPointer_Type,
                                        "_type_", cls);
+        PyMem_Free(buf);
         if (result == NULL)
             return result;
-        key = Py_NewRef(cls);
+        Py_INCREF(cls);
+        key = cls;
     } else {
         PyErr_SetString(PyExc_TypeError, "must be a ctypes type");
         return NULL;

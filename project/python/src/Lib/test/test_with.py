@@ -79,11 +79,11 @@ class Nested(object):
             try:
                 if mgr.__exit__(*ex):
                     ex = (None, None, None)
-            except BaseException as e:
-                ex = (type(e), e, e.__traceback__)
+            except:
+                ex = sys.exc_info()
         self.entered = None
         if ex is not exc_info:
-            raise ex
+            raise ex[0](ex[1]).with_traceback(ex[2])
 
 
 class MockNested(Nested):

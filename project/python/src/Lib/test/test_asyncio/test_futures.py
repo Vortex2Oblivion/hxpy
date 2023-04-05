@@ -10,7 +10,6 @@ from unittest import mock
 from types import GenericAlias
 import asyncio
 from asyncio import futures
-import warnings
 from test.test_asyncio import utils as test_utils
 from test import support
 
@@ -157,7 +156,7 @@ class BaseFutureTests:
         self.assertIs(f.get_loop(), self.loop)
 
     def test_constructor_use_global_loop(self):
-        # Deprecated in 3.10, undeprecated in 3.12
+        # Deprecated in 3.10, undeprecated in 3.11.1
         asyncio.set_event_loop(self.loop)
         self.addCleanup(asyncio.set_event_loop, None)
         f = self._new_future()
@@ -512,7 +511,7 @@ class BaseFutureTests:
         ex.shutdown(wait=True)
 
     def test_wrap_future_use_global_loop(self):
-        # Deprecated in 3.10, undeprecated in 3.12
+        # Deprecated in 3.10, undeprecated in 3.11.1
         asyncio.set_event_loop(self.loop)
         self.addCleanup(asyncio.set_event_loop, None)
         def run(arg):
@@ -604,16 +603,12 @@ class BaseFutureTests:
     def test_future_iter_throw(self):
         fut = self._new_future(loop=self.loop)
         fi = iter(fut)
-        with self.assertWarns(DeprecationWarning):
-            self.assertRaises(Exception, fi.throw, Exception, Exception("zebra"), None)
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=DeprecationWarning)
-            self.assertRaises(TypeError, fi.throw,
-                            Exception, Exception("elephant"), 32)
-            self.assertRaises(TypeError, fi.throw,
-                            Exception("elephant"), Exception("elephant"))
-            # https://github.com/python/cpython/issues/101326
-            self.assertRaises(ValueError, fi.throw, ValueError, None, None)
+        self.assertRaises(TypeError, fi.throw,
+                          Exception, Exception("elephant"), 32)
+        self.assertRaises(TypeError, fi.throw,
+                          Exception("elephant"), Exception("elephant"))
+        # https://github.com/python/cpython/issues/101326
+        self.assertRaises(ValueError, fi.throw, ValueError, None, None)
         self.assertRaises(TypeError, fi.throw, list)
 
     def test_future_del_collect(self):

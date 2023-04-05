@@ -1,6 +1,6 @@
 import faulthandler
 import json
-import os.path
+import os
 import queue
 import signal
 import subprocess
@@ -17,8 +17,7 @@ from test.support import os_helper
 from test.libregrtest.cmdline import Namespace
 from test.libregrtest.main import Regrtest
 from test.libregrtest.runtest import (
-    runtest, is_failed, TestResult, Interrupted, Timeout, ChildError,
-    PROGRESS_MIN_TIME, Passed, EnvChanged)
+    runtest, is_failed, TestResult, Interrupted, Timeout, ChildError, PROGRESS_MIN_TIME)
 from test.libregrtest.setup import setup_tests
 from test.libregrtest.utils import format_duration, print_warning
 
@@ -56,7 +55,7 @@ def parse_worker_args(worker_args) -> tuple[Namespace, str]:
     return (ns, test_name)
 
 
-def run_test_in_subprocess(testname: str, ns: Namespace, tmp_dir: str, stdout_fh: TextIO) -> subprocess.Popen:
+def run_test_in_subprocess(testname: str, ns: Namespace, stdout_fh: TextIO) -> subprocess.Popen:
     ns_dict = vars(ns)
     worker_args = (ns_dict, testname)
     worker_args = json.dumps(worker_args)
@@ -69,17 +68,10 @@ def run_test_in_subprocess(testname: str, ns: Namespace, tmp_dir: str, stdout_fh
            '-m', 'test.regrtest',
            '--worker-args', worker_args]
 
-    env = dict(os.environ)
-    if tmp_dir is not None:
-        env['TMPDIR'] = tmp_dir
-        env['TEMP'] = tmp_dir
-        env['TMP'] = tmp_dir
-
     # Running the child from the same working directory as regrtest's original
     # invocation ensures that TEMPDIR for the child is the same when
     # sysconfig.is_python_build() is true. See issue 15300.
     kw = dict(
-        env=env,
         stdout=stdout_fh,
         # bpo-45410: Write stderr into stdout to keep messages order
         stderr=stdout_fh,
@@ -215,12 +207,12 @@ class TestWorkerProcess(threading.Thread):
         test_result.duration_sec = time.monotonic() - self.start_time
         return MultiprocessResult(test_result, stdout, err_msg)
 
-    def _run_process(self, test_name: str, tmp_dir: str, stdout_fh: TextIO) -> int:
+    def _run_process(self, test_name: str, stdout_fh: TextIO) -> int:
         self.start_time = time.monotonic()
 
         self.current_test_name = test_name
         try:
-            popen = run_test_in_subprocess(test_name, self.ns, tmp_dir, stdout_fh)
+            popen = run_test_in_subprocess(test_name, self.ns, stdout_fh)
 
             self._killed = False
             self._popen = popen
@@ -283,20 +275,7 @@ class TestWorkerProcess(threading.Thread):
             # gh-93353: Check for leaked temporary files in the parent process,
             # since the deletion of temporary files can happen late during
             # Python finalization: too late for libregrtest.
-            if not support.is_wasi:
-                # Don't check for leaked temporary files and directories if Python is
-                # run on WASI. WASI don't pass environment variables like TMPDIR to
-                # worker processes.
-                tmp_dir = tempfile.mkdtemp(prefix="test_python_")
-                tmp_dir = os.path.abspath(tmp_dir)
-                try:
-                    retcode = self._run_process(test_name, tmp_dir, stdout_fh)
-                finally:
-                    tmp_files = os.listdir(tmp_dir)
-                    os_helper.rmtree(tmp_dir)
-            else:
-                retcode = self._run_process(test_name, None, stdout_fh)
-                tmp_files = ()
+            retcode = self._run_process(test_name, stdout_fh)
             stdout_fh.seek(0)
             stdout = stdout_fh.read().strip()
 
@@ -320,14 +299,6 @@ class TestWorkerProcess(threading.Thread):
 
         if err_msg is not None:
             return self.mp_result_error(ChildError(test_name), stdout, err_msg)
-
-        if tmp_files:
-            msg = (f'\n\n'
-                   f'Warning -- {test_name} leaked temporary files '
-                   f'({len(tmp_files)}): {", ".join(sorted(tmp_files))}')
-            stdout += msg
-            if isinstance(result, Passed):
-                result = EnvChanged.from_passed(result)
 
         return MultiprocessResult(result, stdout, err_msg)
 

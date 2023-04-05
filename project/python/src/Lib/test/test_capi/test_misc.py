@@ -8,13 +8,13 @@ import importlib.util
 import os
 import pickle
 import random
+import re
 import subprocess
 import sys
 import textwrap
 import threading
 import time
 import unittest
-import warnings
 import weakref
 from test import support
 from test.support import MISSING_C_DOCSTRINGS
@@ -30,15 +30,14 @@ try:
     import _testmultiphase
 except ImportError:
     _testmultiphase = None
-try:
-    import _testsinglephase
-except ImportError:
-    _testsinglephase = None
 
 # Skip this test if the _testcapi module isn't available.
 _testcapi = import_helper.import_module('_testcapi')
 
 import _testinternalcapi
+
+# Were we compiled --with-pydebug or with #define Py_DEBUG?
+Py_DEBUG = hasattr(sys, 'gettotalrefcount')
 
 
 def decode_stderr(err):
@@ -74,21 +73,65 @@ class CAPITest(unittest.TestCase):
                                   'import _testcapi;'
                                   '_testcapi.crash_no_current_thread()'],
                                  stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE,
-                                 text=True)
+                                 stderr=subprocess.PIPE)
         (out, err) = p.communicate()
-        self.assertEqual(out, '')
+        self.assertEqual(out, b'')
         # This used to cause an infinite loop.
-        msg = ("Fatal Python error: PyThreadState_Get: "
-               "the function must be called with the GIL held, "
-               "after Python initialization and before Python finalization, "
-               "but the GIL is released "
-               "(the current Python thread state is NULL)")
-        self.assertTrue(err.rstrip().startswith(msg),
+        self.assertTrue(err.rstrip().startswith(
+                         b'Fatal Python error: '
+                         b'PyThreadState_Get: '
+                         b'the function must be called with the GIL held, '
+                         b'but the GIL is released '
+                         b'(the current Python thread state is NULL)'),
                         err)
 
     def test_memoryview_from_NULL_pointer(self):
         self.assertRaises(ValueError, _testcapi.make_memoryview_from_NULL_pointer)
+
+    def test_exception(self):
+        raised_exception = ValueError("5")
+        new_exc = TypeError("TEST")
+        try:
+            raise raised_exception
+        except ValueError as e:
+            orig_sys_exception = sys.exception()
+            orig_exception = _testcapi.set_exception(new_exc)
+            new_sys_exception = sys.exception()
+            new_exception = _testcapi.set_exception(orig_exception)
+            reset_sys_exception = sys.exception()
+
+            self.assertEqual(orig_exception, e)
+
+            self.assertEqual(orig_exception, raised_exception)
+            self.assertEqual(orig_sys_exception, orig_exception)
+            self.assertEqual(reset_sys_exception, orig_exception)
+            self.assertEqual(new_exception, new_exc)
+            self.assertEqual(new_sys_exception, new_exception)
+        else:
+            self.fail("Exception not raised")
+
+    def test_exc_info(self):
+        raised_exception = ValueError("5")
+        new_exc = TypeError("TEST")
+        try:
+            raise raised_exception
+        except ValueError as e:
+            tb = e.__traceback__
+            orig_sys_exc_info = sys.exc_info()
+            orig_exc_info = _testcapi.set_exc_info(new_exc.__class__, new_exc, None)
+            new_sys_exc_info = sys.exc_info()
+            new_exc_info = _testcapi.set_exc_info(*orig_exc_info)
+            reset_sys_exc_info = sys.exc_info()
+
+            self.assertEqual(orig_exc_info[1], e)
+
+            self.assertSequenceEqual(orig_exc_info, (raised_exception.__class__, raised_exception, tb))
+            self.assertSequenceEqual(orig_sys_exc_info, orig_exc_info)
+            self.assertSequenceEqual(reset_sys_exc_info, orig_exc_info)
+            self.assertSequenceEqual(new_exc_info, (new_exc.__class__, new_exc, None))
+            self.assertSequenceEqual(new_sys_exc_info, new_exc_info)
+        else:
+            self.assertTrue(False)
 
     @unittest.skipUnless(_posixsubprocess, '_posixsubprocess required for this test.')
     def test_seq_bytes_to_charp_array(self):
@@ -188,7 +231,7 @@ class CAPITest(unittest.TestCase):
     def test_return_null_without_error(self):
         # Issue #23571: A function must not return NULL without setting an
         # error
-        if support.Py_DEBUG:
+        if Py_DEBUG:
             code = textwrap.dedent("""
                 import _testcapi
                 from test import support
@@ -216,7 +259,7 @@ class CAPITest(unittest.TestCase):
 
     def test_return_result_with_error(self):
         # Issue #23571: A function must not return a result with an error set
-        if support.Py_DEBUG:
+        if Py_DEBUG:
             code = textwrap.dedent("""
                 import _testcapi
                 from test import support
@@ -280,6 +323,42 @@ class CAPITest(unittest.TestCase):
 
     def test_buildvalue_N(self):
         _testcapi.test_buildvalue_N()
+
+    def test_set_nomemory(self):
+        code = """if 1:
+            import _testcapi
+
+            class C(): pass
+
+            # The first loop tests both functions and that remove_mem_hooks()
+            # can be called twice in a row. The second loop checks a call to
+            # set_nomemory() after a call to remove_mem_hooks(). The third
+            # loop checks the start and stop arguments of set_nomemory().
+            for outer_cnt in range(1, 4):
+                start = 10 * outer_cnt
+                for j in range(100):
+                    if j == 0:
+                        if outer_cnt != 3:
+                            _testcapi.set_nomemory(start)
+                        else:
+                            _testcapi.set_nomemory(start, start + 1)
+                    try:
+                        C()
+                    except MemoryError as e:
+                        if outer_cnt != 3:
+                            _testcapi.remove_mem_hooks()
+                        print('MemoryError', outer_cnt, j)
+                        _testcapi.remove_mem_hooks()
+                        break
+        """
+        rc, out, err = assert_python_ok('-c', code)
+        lines = out.splitlines()
+        for i, line in enumerate(lines, 1):
+            self.assertIn(b'MemoryError', out)
+            *_, count = line.split(b' ')
+            count = int(count)
+            self.assertLessEqual(count, i*5)
+            self.assertGreaterEqual(count, i*5-2)
 
     def test_mapping_keys_values_items(self):
         class Mapping1(dict):
@@ -373,6 +452,11 @@ class CAPITest(unittest.TestCase):
         with self.assertRaises(TypeError):
             _testcapi.sequence_set_slice(None, 1, 3, 'xy')
 
+        mapping = {1: 'a', 2: 'b', 3: 'c'}
+        with self.assertRaises(TypeError):
+            _testcapi.sequence_set_slice(mapping, 1, 3, 'xy')
+        self.assertEqual(mapping, {1: 'a', 2: 'b', 3: 'c'})
+
     def test_sequence_del_slice(self):
         # Correct case:
         data = [1, 2, 3, 4, 5]
@@ -408,7 +492,7 @@ class CAPITest(unittest.TestCase):
             _testcapi.sequence_del_slice(None, 1, 3)
 
         mapping = {1: 'a', 2: 'b', 3: 'c'}
-        with self.assertRaises(KeyError):
+        with self.assertRaises(TypeError):
             _testcapi.sequence_del_slice(mapping, 1, 3)
         self.assertEqual(mapping, {1: 'a', 2: 'b', 3: 'c'})
 
@@ -525,7 +609,7 @@ class CAPITest(unittest.TestCase):
         del subclass_instance
 
         # Test that setting __class__ modified the reference counts of the types
-        if support.Py_DEBUG:
+        if Py_DEBUG:
             # gh-89373: In debug mode, _Py_Dealloc() keeps a strong reference
             # to the type while calling tp_dealloc()
             self.assertEqual(type_refcnt, B.refcnt_in_del)
@@ -549,30 +633,6 @@ class CAPITest(unittest.TestCase):
         inst = _testcapi.HeapCTypeWithDict()
         self.assertEqual({}, inst.__dict__)
 
-    def test_heaptype_with_managed_dict(self):
-        inst = _testcapi.HeapCTypeWithManagedDict()
-        inst.foo = 42
-        self.assertEqual(inst.foo, 42)
-        self.assertEqual(inst.__dict__, {"foo": 42})
-
-        inst = _testcapi.HeapCTypeWithManagedDict()
-        self.assertEqual({}, inst.__dict__)
-
-        a = _testcapi.HeapCTypeWithManagedDict()
-        b = _testcapi.HeapCTypeWithManagedDict()
-        a.b = b
-        b.a = a
-        del a, b
-
-    def test_sublclassing_managed_dict(self):
-
-        class C(_testcapi.HeapCTypeWithManagedDict):
-            pass
-
-        i = C()
-        i.spam = i
-        del i
-
     def test_heaptype_with_negative_dict(self):
         inst = _testcapi.HeapCTypeWithNegativeDict()
         inst.foo = 42
@@ -588,37 +648,6 @@ class CAPITest(unittest.TestCase):
         ref = weakref.ref(inst)
         self.assertEqual(ref(), inst)
         self.assertEqual(inst.weakreflist, ref)
-
-    def test_heaptype_with_managed_weakref(self):
-        inst = _testcapi.HeapCTypeWithManagedWeakref()
-        ref = weakref.ref(inst)
-        self.assertEqual(ref(), inst)
-
-    def test_sublclassing_managed_weakref(self):
-
-        class C(_testcapi.HeapCTypeWithManagedWeakref):
-            pass
-
-        inst = C()
-        ref = weakref.ref(inst)
-        self.assertEqual(ref(), inst)
-
-    def test_sublclassing_managed_both(self):
-
-        class C1(_testcapi.HeapCTypeWithManagedWeakref, _testcapi.HeapCTypeWithManagedDict):
-            pass
-
-        class C2(_testcapi.HeapCTypeWithManagedDict, _testcapi.HeapCTypeWithManagedWeakref):
-            pass
-
-        for cls in (C1, C2):
-            inst = cls()
-            ref = weakref.ref(inst)
-            self.assertEqual(ref(), inst)
-            inst.spam = inst
-            del inst
-            ref = weakref.ref(cls())
-            self.assertIs(ref(), None)
 
     def test_heaptype_with_buffer(self):
         inst = _testcapi.HeapCTypeWithBuffer()
@@ -650,7 +679,7 @@ class CAPITest(unittest.TestCase):
         del subclass_instance
 
         # Test that setting __class__ modified the reference counts of the types
-        if support.Py_DEBUG:
+        if Py_DEBUG:
             # gh-89373: In debug mode, _Py_Dealloc() keeps a strong reference
             # to the type while calling tp_dealloc()
             self.assertEqual(type_refcnt, _testcapi.HeapCTypeSubclassWithFinalizer.refcnt_in_del)
@@ -672,124 +701,78 @@ class CAPITest(unittest.TestCase):
         del obj.value
         self.assertEqual(obj.pvalue, 0)
 
-    def test_heaptype_with_custom_metaclass(self):
-        self.assertTrue(issubclass(_testcapi.HeapCTypeMetaclass, type))
-        self.assertTrue(issubclass(_testcapi.HeapCTypeMetaclassCustomNew, type))
-
-        t = _testcapi.pytype_fromspec_meta(_testcapi.HeapCTypeMetaclass)
-        self.assertIsInstance(t, type)
-        self.assertEqual(t.__name__, "HeapCTypeViaMetaclass")
-        self.assertIs(type(t), _testcapi.HeapCTypeMetaclass)
-
-        msg = "Metaclasses with custom tp_new are not supported."
-        with self.assertRaisesRegex(TypeError, msg):
-            t = _testcapi.pytype_fromspec_meta(_testcapi.HeapCTypeMetaclassCustomNew)
-
     def test_multiple_inheritance_ctypes_with_weakref_or_dict(self):
 
-        with self.assertRaises(TypeError):
-            class Both1(_testcapi.HeapCTypeWithWeakref, _testcapi.HeapCTypeWithDict):
-                pass
-        with self.assertRaises(TypeError):
-            class Both2(_testcapi.HeapCTypeWithDict, _testcapi.HeapCTypeWithWeakref):
-                pass
-
-    def test_multiple_inheritance_ctypes_with_weakref_or_dict_and_other_builtin(self):
-
-        with self.assertRaises(TypeError):
-            class C1(_testcapi.HeapCTypeWithDict, list):
-                pass
-
-        with self.assertRaises(TypeError):
-            class C2(_testcapi.HeapCTypeWithWeakref, list):
-                pass
-
-        class C3(_testcapi.HeapCTypeWithManagedDict, list):
+        class Both1(_testcapi.HeapCTypeWithWeakref, _testcapi.HeapCTypeWithDict):
             pass
-        class C4(_testcapi.HeapCTypeWithManagedWeakref, list):
+        class Both2(_testcapi.HeapCTypeWithDict, _testcapi.HeapCTypeWithWeakref):
             pass
 
-        inst = C3()
-        inst.append(0)
-        str(inst.__dict__)
-
-        inst = C4()
-        inst.append(0)
-        str(inst.__weakref__)
-
-        for cls in (_testcapi.HeapCTypeWithManagedDict, _testcapi.HeapCTypeWithManagedWeakref):
-            for cls2 in (_testcapi.HeapCTypeWithDict, _testcapi.HeapCTypeWithWeakref):
-                class S(cls, cls2):
-                    pass
-            class B1(C3, cls):
+        for cls in (_testcapi.HeapCTypeWithDict, _testcapi.HeapCTypeWithDict2,
+            _testcapi.HeapCTypeWithWeakref, _testcapi.HeapCTypeWithWeakref2):
+            for cls2 in (_testcapi.HeapCTypeWithDict, _testcapi.HeapCTypeWithDict2,
+                _testcapi.HeapCTypeWithWeakref, _testcapi.HeapCTypeWithWeakref2):
+                if cls is not cls2:
+                    class S(cls, cls2):
+                        pass
+            class B1(Both1, cls):
                 pass
-            class B2(C4, cls):
+            class B2(Both1, cls):
                 pass
-
-    def test_pytype_fromspec_with_repeated_slots(self):
-        for variant in range(2):
-            with self.subTest(variant=variant):
-                with self.assertRaises(SystemError):
-                    _testcapi.create_type_from_repeated_slots(variant)
-
-    @warnings_helper.ignore_warnings(category=DeprecationWarning)
-    def test_immutable_type_with_mutable_base(self):
-        # Add deprecation warning here so it's removed in 3.14
-        warnings._deprecated(
-            'creating immutable classes with mutable bases', remove=(3, 14))
-
-        class MutableBase:
-            def meth(self):
-                return 'original'
-
-        with self.assertWarns(DeprecationWarning):
-            ImmutableSubclass = _testcapi.make_immutable_type_with_base(
-                MutableBase)
-        instance = ImmutableSubclass()
-
-        self.assertEqual(instance.meth(), 'original')
-
-        # Cannot override the static type's method
-        with self.assertRaisesRegex(
-                TypeError,
-                "cannot set 'meth' attribute of immutable type"):
-            ImmutableSubclass.meth = lambda self: 'overridden'
-        self.assertEqual(instance.meth(), 'original')
-
-        # Can change the method on the mutable base
-        MutableBase.meth = lambda self: 'changed'
-        self.assertEqual(instance.meth(), 'changed')
-
 
     def test_pynumber_tobase(self):
         from _testcapi import pynumber_tobase
-        small_number = 123
-        large_number = 2**64
-        class IDX:
-            def __init__(self, val):
-                self.val = val
-            def __index__(self):
-                return self.val
-
-        test_cases = ((2, '0b1111011', '0b10000000000000000000000000000000000000000000000000000000000000000'),
-                      (8, '0o173', '0o2000000000000000000000'),
-                      (10, '123', '18446744073709551616'),
-                      (16, '0x7b', '0x10000000000000000'))
-        for base, small_target, large_target in test_cases:
-            with self.subTest(base=base, st=small_target, lt=large_target):
-                # Test for small number
-                self.assertEqual(pynumber_tobase(small_number, base), small_target)
-                self.assertEqual(pynumber_tobase(-small_number, base), '-' + small_target)
-                self.assertEqual(pynumber_tobase(IDX(small_number), base), small_target)
-                # Test for large number(out of range of a longlong,i.e.[-2**63, 2**63-1])
-                self.assertEqual(pynumber_tobase(large_number, base), large_target)
-                self.assertEqual(pynumber_tobase(-large_number, base), '-' + large_target)
-                self.assertEqual(pynumber_tobase(IDX(large_number), base), large_target)
-        self.assertRaises(TypeError, pynumber_tobase, IDX(123.0), 10)
-        self.assertRaises(TypeError, pynumber_tobase, IDX('123'), 10)
+        self.assertEqual(pynumber_tobase(123, 2), '0b1111011')
+        self.assertEqual(pynumber_tobase(123, 8), '0o173')
+        self.assertEqual(pynumber_tobase(123, 10), '123')
+        self.assertEqual(pynumber_tobase(123, 16), '0x7b')
+        self.assertEqual(pynumber_tobase(-123, 2), '-0b1111011')
+        self.assertEqual(pynumber_tobase(-123, 8), '-0o173')
+        self.assertEqual(pynumber_tobase(-123, 10), '-123')
+        self.assertEqual(pynumber_tobase(-123, 16), '-0x7b')
         self.assertRaises(TypeError, pynumber_tobase, 123.0, 10)
         self.assertRaises(TypeError, pynumber_tobase, '123', 10)
         self.assertRaises(SystemError, pynumber_tobase, 123, 0)
+
+    def check_fatal_error(self, code, expected, not_expected=()):
+        with support.SuppressCrashReport():
+            rc, out, err = assert_python_failure('-sSI', '-c', code)
+
+        err = decode_stderr(err)
+        self.assertIn('Fatal Python error: test_fatal_error: MESSAGE\n',
+                      err)
+
+        match = re.search(r'^Extension modules:(.*) \(total: ([0-9]+)\)$',
+                          err, re.MULTILINE)
+        if not match:
+            self.fail(f"Cannot find 'Extension modules:' in {err!r}")
+        modules = set(match.group(1).strip().split(', '))
+        total = int(match.group(2))
+
+        for name in expected:
+            self.assertIn(name, modules)
+        for name in not_expected:
+            self.assertNotIn(name, modules)
+        self.assertEqual(len(modules), total)
+
+    @support.requires_subprocess()
+    def test_fatal_error(self):
+        # By default, stdlib extension modules are ignored,
+        # but not test modules.
+        expected = ('_testcapi',)
+        not_expected = ('sys',)
+        code = 'import _testcapi, sys; _testcapi.fatal_error(b"MESSAGE")'
+        self.check_fatal_error(code, expected, not_expected)
+
+        # Mark _testcapi as stdlib module, but not sys
+        expected = ('sys',)
+        not_expected = ('_testcapi',)
+        code = textwrap.dedent('''
+            import _testcapi, sys
+            sys.stdlib_module_names = frozenset({"_testcapi"})
+            _testcapi.fatal_error(b"MESSAGE")
+        ''')
+        self.check_fatal_error(code, expected)
 
     def test_pyobject_repr_from_null(self):
         s = _testcapi.pyobject_repr_from_null()
@@ -833,20 +816,6 @@ class CAPITest(unittest.TestCase):
         for name in names:
             with self.subTest(name=name):
                 self.assertTrue(hasattr(ctypes.pythonapi, name))
-
-    def test_clear_managed_dict(self):
-
-        class C:
-            def __init__(self):
-                self.a = 1
-
-        c = C()
-        _testcapi.clear_managed_dict(c)
-        self.assertEqual(c.__dict__, {})
-        c = C()
-        self.assertEqual(c.__dict__, {'a':1})
-        _testcapi.clear_managed_dict(c)
-        self.assertEqual(c.__dict__, {})
 
     def test_eval_get_func_name(self):
         def function_example(): ...
@@ -912,140 +881,6 @@ class CAPITest(unittest.TestCase):
 
         with self.assertRaises(SystemError):
             _testcapi.function_get_module(None)  # not a function
-
-    def test_function_get_defaults(self):
-        def some(
-            pos_only1, pos_only2='p',
-            /,
-            zero=0, optional=None,
-            *,
-            kw1,
-            kw2=True,
-        ):
-            pass
-
-        defaults = _testcapi.function_get_defaults(some)
-        self.assertEqual(defaults, ('p', 0, None))
-        self.assertEqual(defaults, some.__defaults__)
-
-        with self.assertRaises(SystemError):
-            _testcapi.function_get_defaults(None)  # not a function
-
-    def test_function_set_defaults(self):
-        def some(
-            pos_only1, pos_only2='p',
-            /,
-            zero=0, optional=None,
-            *,
-            kw1,
-            kw2=True,
-        ):
-            pass
-
-        old_defaults = ('p', 0, None)
-        self.assertEqual(_testcapi.function_get_defaults(some), old_defaults)
-        self.assertEqual(some.__defaults__, old_defaults)
-
-        with self.assertRaises(SystemError):
-            _testcapi.function_set_defaults(some, 1)  # not tuple or None
-        self.assertEqual(_testcapi.function_get_defaults(some), old_defaults)
-        self.assertEqual(some.__defaults__, old_defaults)
-
-        with self.assertRaises(SystemError):
-            _testcapi.function_set_defaults(1, ())    # not a function
-        self.assertEqual(_testcapi.function_get_defaults(some), old_defaults)
-        self.assertEqual(some.__defaults__, old_defaults)
-
-        new_defaults = ('q', 1, None)
-        _testcapi.function_set_defaults(some, new_defaults)
-        self.assertEqual(_testcapi.function_get_defaults(some), new_defaults)
-        self.assertEqual(some.__defaults__, new_defaults)
-
-        # Empty tuple is fine:
-        new_defaults = ()
-        _testcapi.function_set_defaults(some, new_defaults)
-        self.assertEqual(_testcapi.function_get_defaults(some), new_defaults)
-        self.assertEqual(some.__defaults__, new_defaults)
-
-        class tuplesub(tuple): ...  # tuple subclasses must work
-
-        new_defaults = tuplesub(((1, 2), ['a', 'b'], None))
-        _testcapi.function_set_defaults(some, new_defaults)
-        self.assertEqual(_testcapi.function_get_defaults(some), new_defaults)
-        self.assertEqual(some.__defaults__, new_defaults)
-
-        # `None` is special, it sets `defaults` to `NULL`,
-        # it needs special handling in `_testcapi`:
-        _testcapi.function_set_defaults(some, None)
-        self.assertEqual(_testcapi.function_get_defaults(some), None)
-        self.assertEqual(some.__defaults__, None)
-
-    def test_function_get_kw_defaults(self):
-        def some(
-            pos_only1, pos_only2='p',
-            /,
-            zero=0, optional=None,
-            *,
-            kw1,
-            kw2=True,
-        ):
-            pass
-
-        defaults = _testcapi.function_get_kw_defaults(some)
-        self.assertEqual(defaults, {'kw2': True})
-        self.assertEqual(defaults, some.__kwdefaults__)
-
-        with self.assertRaises(SystemError):
-            _testcapi.function_get_kw_defaults(None)  # not a function
-
-    def test_function_set_kw_defaults(self):
-        def some(
-            pos_only1, pos_only2='p',
-            /,
-            zero=0, optional=None,
-            *,
-            kw1,
-            kw2=True,
-        ):
-            pass
-
-        old_defaults = {'kw2': True}
-        self.assertEqual(_testcapi.function_get_kw_defaults(some), old_defaults)
-        self.assertEqual(some.__kwdefaults__, old_defaults)
-
-        with self.assertRaises(SystemError):
-            _testcapi.function_set_kw_defaults(some, 1)  # not dict or None
-        self.assertEqual(_testcapi.function_get_kw_defaults(some), old_defaults)
-        self.assertEqual(some.__kwdefaults__, old_defaults)
-
-        with self.assertRaises(SystemError):
-            _testcapi.function_set_kw_defaults(1, {})    # not a function
-        self.assertEqual(_testcapi.function_get_kw_defaults(some), old_defaults)
-        self.assertEqual(some.__kwdefaults__, old_defaults)
-
-        new_defaults = {'kw2': (1, 2, 3)}
-        _testcapi.function_set_kw_defaults(some, new_defaults)
-        self.assertEqual(_testcapi.function_get_kw_defaults(some), new_defaults)
-        self.assertEqual(some.__kwdefaults__, new_defaults)
-
-        # Empty dict is fine:
-        new_defaults = {}
-        _testcapi.function_set_kw_defaults(some, new_defaults)
-        self.assertEqual(_testcapi.function_get_kw_defaults(some), new_defaults)
-        self.assertEqual(some.__kwdefaults__, new_defaults)
-
-        class dictsub(dict): ...  # dict subclasses must work
-
-        new_defaults = dictsub({'kw2': None})
-        _testcapi.function_set_kw_defaults(some, new_defaults)
-        self.assertEqual(_testcapi.function_get_kw_defaults(some), new_defaults)
-        self.assertEqual(some.__kwdefaults__, new_defaults)
-
-        # `None` is special, it sets `kwdefaults` to `NULL`,
-        # it needs special handling in `_testcapi`:
-        _testcapi.function_set_kw_defaults(some, None)
-        self.assertEqual(_testcapi.function_get_kw_defaults(some), None)
-        self.assertEqual(some.__kwdefaults__, None)
 
 
 class TestPendingCalls(unittest.TestCase):
@@ -1127,11 +962,6 @@ class TestPendingCalls(unittest.TestCase):
         self.pendingcalls_submit(l, n)
         self.pendingcalls_wait(l, n)
 
-    def test_gen_get_code(self):
-        def genf(): yield
-        gen = genf()
-        self.assertEqual(_testcapi.gen_get_code(gen), gen.gi_code)
-
 
 class SubinterpreterTest(unittest.TestCase):
 
@@ -1172,163 +1002,6 @@ class SubinterpreterTest(unittest.TestCase):
             ret = support.run_in_subinterp(code)
             self.assertEqual(ret, 0)
             self.assertEqual(pickle.load(f), {'a': '123x', 'b': '123'})
-
-    def test_py_config_isoloated_per_interpreter(self):
-        # A config change in one interpreter must not leak to out to others.
-        #
-        # This test could verify ANY config value, it just happens to have been
-        # written around the time of int_max_str_digits. Refactoring is okay.
-        code = """if 1:
-        import sys, _testinternalcapi
-
-        # Any config value would do, this happens to be the one being
-        # double checked at the time this test was written.
-        config = _testinternalcapi.get_config()
-        config['int_max_str_digits'] = 55555
-        _testinternalcapi.set_config(config)
-        sub_value = _testinternalcapi.get_config()['int_max_str_digits']
-        assert sub_value == 55555, sub_value
-        """
-        before_config = _testinternalcapi.get_config()
-        assert before_config['int_max_str_digits'] != 55555
-        self.assertEqual(support.run_in_subinterp(code), 0,
-                         'subinterp code failure, check stderr.')
-        after_config = _testinternalcapi.get_config()
-        self.assertIsNot(
-                before_config, after_config,
-                "Expected get_config() to return a new dict on each call")
-        self.assertEqual(before_config, after_config,
-                         "CAUTION: Tests executed after this may be "
-                         "running under an altered config.")
-        # try:...finally: calling set_config(before_config) not done
-        # as that results in sys.argv, sys.path, and sys.warnoptions
-        # "being modified by test_capi" per test.regrtest.  So if this
-        # test fails, assume that the environment in this process may
-        # be altered and suspect.
-
-    @unittest.skipUnless(hasattr(os, "pipe"), "requires os.pipe()")
-    def test_configured_settings(self):
-        """
-        The config with which an interpreter is created corresponds
-        1-to-1 with the new interpreter's settings.  This test verifies
-        that they match.
-        """
-        import json
-
-        EXTENSIONS = 1<<8
-        THREADS = 1<<10
-        DAEMON_THREADS = 1<<11
-        FORK = 1<<15
-        EXEC = 1<<16
-
-        features = ['fork', 'exec', 'threads', 'daemon_threads', 'extensions']
-        kwlist = [f'allow_{n}' for n in features]
-        kwlist[-1] = 'check_multi_interp_extensions'
-        for config, expected in {
-            (True, True, True, True, True):
-                FORK | EXEC | THREADS | DAEMON_THREADS | EXTENSIONS,
-            (False, False, False, False, False): 0,
-            (False, False, True, False, True): THREADS | EXTENSIONS,
-        }.items():
-            kwargs = dict(zip(kwlist, config))
-            expected = {
-                'feature_flags': expected,
-            }
-            with self.subTest(config):
-                r, w = os.pipe()
-                script = textwrap.dedent(f'''
-                    import _testinternalcapi, json, os
-                    settings = _testinternalcapi.get_interp_settings()
-                    with os.fdopen({w}, "w") as stdin:
-                        json.dump(settings, stdin)
-                    ''')
-                with os.fdopen(r) as stdout:
-                    ret = support.run_in_subinterp_with_config(script, **kwargs)
-                    self.assertEqual(ret, 0)
-                    out = stdout.read()
-                settings = json.loads(out)
-
-                self.assertEqual(settings, expected)
-
-    @unittest.skipIf(_testsinglephase is None, "test requires _testsinglephase module")
-    @unittest.skipUnless(hasattr(os, "pipe"), "requires os.pipe()")
-    def test_overridden_setting_extensions_subinterp_check(self):
-        """
-        PyInterpreterConfig.check_multi_interp_extensions can be overridden
-        with PyInterpreterState.override_multi_interp_extensions_check.
-        This verifies that the override works but does not modify
-        the underlying setting.
-        """
-        import json
-
-        EXTENSIONS = 1<<8
-        THREADS = 1<<10
-        DAEMON_THREADS = 1<<11
-        FORK = 1<<15
-        EXEC = 1<<16
-        BASE_FLAGS = FORK | EXEC | THREADS | DAEMON_THREADS
-        base_kwargs = {
-            'allow_fork': True,
-            'allow_exec': True,
-            'allow_threads': True,
-            'allow_daemon_threads': True,
-        }
-
-        def check(enabled, override):
-            kwargs = dict(
-                base_kwargs,
-                check_multi_interp_extensions=enabled,
-            )
-            flags = BASE_FLAGS | EXTENSIONS if enabled else BASE_FLAGS
-            settings = {
-                'feature_flags': flags,
-            }
-
-            expected = {
-                'requested': override,
-                'override__initial': 0,
-                'override_after': override,
-                'override_restored': 0,
-                # The override should not affect the config or settings.
-                'settings__initial': settings,
-                'settings_after': settings,
-                'settings_restored': settings,
-                # These are the most likely values to be wrong.
-                'allowed__initial': not enabled,
-                'allowed_after': not ((override > 0) if override else enabled),
-                'allowed_restored': not enabled,
-            }
-
-            r, w = os.pipe()
-            script = textwrap.dedent(f'''
-                from test.test_capi.check_config import run_singlephase_check
-                run_singlephase_check({override}, {w})
-                ''')
-            with os.fdopen(r) as stdout:
-                ret = support.run_in_subinterp_with_config(script, **kwargs)
-                self.assertEqual(ret, 0)
-                out = stdout.read()
-            results = json.loads(out)
-
-            self.assertEqual(results, expected)
-
-        self.maxDiff = None
-
-        # setting: check disabled
-        with self.subTest('config: check disabled; override: disabled'):
-            check(False, -1)
-        with self.subTest('config: check disabled; override: use config'):
-            check(False, 0)
-        with self.subTest('config: check disabled; override: enabled'):
-            check(False, 1)
-
-        # setting: check enabled
-        with self.subTest('config: check enabled; override: disabled'):
-            check(True, -1)
-        with self.subTest('config: check enabled; override: use config'):
-            check(True, 0)
-        with self.subTest('config: check enabled; override: enabled'):
-            check(True, 1)
 
     def test_mutate_exception(self):
         """
@@ -1415,9 +1088,6 @@ class TestThreadState(unittest.TestCase):
         ret = assert_python_ok('-X', 'tracemalloc', '-c', code)
         self.assertIn(b'callback called', ret.out)
 
-    def test_gilstate_matches_current(self):
-        _testcapi.test_current_tstate_matches()
-
 
 class Test_testcapi(unittest.TestCase):
     locals().update((name, getattr(_testcapi, name))
@@ -1437,6 +1107,124 @@ class Test_testinternalcapi(unittest.TestCase):
     locals().update((name, getattr(_testinternalcapi, name))
                     for name in dir(_testinternalcapi)
                     if name.startswith('test_'))
+
+
+@support.requires_subprocess()
+class PyMemDebugTests(unittest.TestCase):
+    PYTHONMALLOC = 'debug'
+    # '0x04c06e0' or '04C06E0'
+    PTR_REGEX = r'(?:0x)?[0-9a-fA-F]+'
+
+    def check(self, code):
+        with support.SuppressCrashReport():
+            out = assert_python_failure(
+                '-c', code,
+                PYTHONMALLOC=self.PYTHONMALLOC,
+                # FreeBSD: instruct jemalloc to not fill freed() memory
+                # with junk byte 0x5a, see JEMALLOC(3)
+                MALLOC_CONF="junk:false",
+            )
+        stderr = out.err
+        return stderr.decode('ascii', 'replace')
+
+    def test_buffer_overflow(self):
+        out = self.check('import _testcapi; _testcapi.pymem_buffer_overflow()')
+        regex = (r"Debug memory block at address p={ptr}: API 'm'\n"
+                 r"    16 bytes originally requested\n"
+                 r"    The [0-9] pad bytes at p-[0-9] are FORBIDDENBYTE, as expected.\n"
+                 r"    The [0-9] pad bytes at tail={ptr} are not all FORBIDDENBYTE \(0x[0-9a-f]{{2}}\):\n"
+                 r"        at tail\+0: 0x78 \*\*\* OUCH\n"
+                 r"        at tail\+1: 0xfd\n"
+                 r"        at tail\+2: 0xfd\n"
+                 r"        .*\n"
+                 r"(    The block was made by call #[0-9]+ to debug malloc/realloc.\n)?"
+                 r"    Data at p: cd cd cd .*\n"
+                 r"\n"
+                 r"Enable tracemalloc to get the memory block allocation traceback\n"
+                 r"\n"
+                 r"Fatal Python error: _PyMem_DebugRawFree: bad trailing pad byte")
+        regex = regex.format(ptr=self.PTR_REGEX)
+        regex = re.compile(regex, flags=re.DOTALL)
+        self.assertRegex(out, regex)
+
+    def test_api_misuse(self):
+        out = self.check('import _testcapi; _testcapi.pymem_api_misuse()')
+        regex = (r"Debug memory block at address p={ptr}: API 'm'\n"
+                 r"    16 bytes originally requested\n"
+                 r"    The [0-9] pad bytes at p-[0-9] are FORBIDDENBYTE, as expected.\n"
+                 r"    The [0-9] pad bytes at tail={ptr} are FORBIDDENBYTE, as expected.\n"
+                 r"(    The block was made by call #[0-9]+ to debug malloc/realloc.\n)?"
+                 r"    Data at p: cd cd cd .*\n"
+                 r"\n"
+                 r"Enable tracemalloc to get the memory block allocation traceback\n"
+                 r"\n"
+                 r"Fatal Python error: _PyMem_DebugRawFree: bad ID: Allocated using API 'm', verified using API 'r'\n")
+        regex = regex.format(ptr=self.PTR_REGEX)
+        self.assertRegex(out, regex)
+
+    def check_malloc_without_gil(self, code):
+        out = self.check(code)
+        expected = ('Fatal Python error: _PyMem_DebugMalloc: '
+                    'Python memory allocator called without holding the GIL')
+        self.assertIn(expected, out)
+
+    def test_pymem_malloc_without_gil(self):
+        # Debug hooks must raise an error if PyMem_Malloc() is called
+        # without holding the GIL
+        code = 'import _testcapi; _testcapi.pymem_malloc_without_gil()'
+        self.check_malloc_without_gil(code)
+
+    def test_pyobject_malloc_without_gil(self):
+        # Debug hooks must raise an error if PyObject_Malloc() is called
+        # without holding the GIL
+        code = 'import _testcapi; _testcapi.pyobject_malloc_without_gil()'
+        self.check_malloc_without_gil(code)
+
+    def check_pyobject_is_freed(self, func_name):
+        code = textwrap.dedent(f'''
+            import gc, os, sys, _testcapi
+            # Disable the GC to avoid crash on GC collection
+            gc.disable()
+            try:
+                _testcapi.{func_name}()
+                # Exit immediately to avoid a crash while deallocating
+                # the invalid object
+                os._exit(0)
+            except _testcapi.error:
+                os._exit(1)
+        ''')
+        assert_python_ok(
+            '-c', code,
+            PYTHONMALLOC=self.PYTHONMALLOC,
+            MALLOC_CONF="junk:false",
+        )
+
+    def test_pyobject_null_is_freed(self):
+        self.check_pyobject_is_freed('check_pyobject_null_is_freed')
+
+    def test_pyobject_uninitialized_is_freed(self):
+        self.check_pyobject_is_freed('check_pyobject_uninitialized_is_freed')
+
+    def test_pyobject_forbidden_bytes_is_freed(self):
+        self.check_pyobject_is_freed('check_pyobject_forbidden_bytes_is_freed')
+
+    def test_pyobject_freed_is_freed(self):
+        self.check_pyobject_is_freed('check_pyobject_freed_is_freed')
+
+
+class PyMemMallocDebugTests(PyMemDebugTests):
+    PYTHONMALLOC = 'malloc_debug'
+
+
+@unittest.skipUnless(support.with_pymalloc(), 'need pymalloc')
+class PyMemPymallocDebugTests(PyMemDebugTests):
+    PYTHONMALLOC = 'pymalloc_debug'
+
+
+@unittest.skipUnless(Py_DEBUG, 'need Py_DEBUG')
+class PyMemDefaultTests(PyMemDebugTests):
+    # test default allocator of Python compiled in debug mode
+    PYTHONMALLOC = ''
 
 
 @unittest.skipIf(_testmultiphase is None, "test requires _testmultiphase module")
@@ -1525,6 +1313,37 @@ class Test_ModuleStateAccess(unittest.TestCase):
         class Subclass(BaseException, self.module.StateAccessType):
             pass
         self.assertIs(Subclass().get_defining_module(), self.module)
+
+
+class Test_FrameAPI(unittest.TestCase):
+
+    def getframe(self):
+        return sys._getframe()
+
+    def getgenframe(self):
+        yield sys._getframe()
+
+    def test_frame_getters(self):
+        frame = self.getframe()
+        self.assertEqual(frame.f_locals, _testcapi.frame_getlocals(frame))
+        self.assertIs(frame.f_globals, _testcapi.frame_getglobals(frame))
+        self.assertIs(frame.f_builtins, _testcapi.frame_getbuiltins(frame))
+        self.assertEqual(frame.f_lasti, _testcapi.frame_getlasti(frame))
+
+    def test_frame_get_generator(self):
+        gen = self.getgenframe()
+        frame = next(gen)
+        self.assertIs(gen, _testcapi.frame_getgenerator(frame))
+
+    def test_frame_fback_api(self):
+        """Test that accessing `f_back` does not cause a segmentation fault on
+        a frame created with `PyFrame_New` (GH-99110)."""
+        def dummy():
+            pass
+
+        frame = _testcapi.frame_new(dummy.__code__, globals(), locals())
+        # The following line should not cause a segmentation fault.
+        self.assertIsNone(frame.f_back)
 
 
 SUFFICIENT_TO_DEOPT_AND_SPECIALIZE = 100

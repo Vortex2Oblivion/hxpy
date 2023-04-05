@@ -25,18 +25,8 @@ class _State(enum.Enum):
 
 @final
 class Timeout:
-    """Asynchronous context manager for cancelling overdue coroutines.
-
-    Use `timeout()` or `timeout_at()` rather than instantiating this class directly.
-    """
 
     def __init__(self, when: Optional[float]) -> None:
-        """Schedule a timeout that will trigger at a given loop time.
-
-        - If `when` is `None`, the timeout will never trigger.
-        - If `when < loop.time()`, the timeout will trigger on the next
-          iteration of the event loop.
-        """
         self._state = _State.CREATED
 
         self._timeout_handler: Optional[events.TimerHandle] = None
@@ -44,11 +34,9 @@ class Timeout:
         self._when = when
 
     def when(self) -> Optional[float]:
-        """Return the current deadline."""
         return self._when
 
     def reschedule(self, when: Optional[float]) -> None:
-        """Reschedule the timeout."""
         assert self._state is not _State.CREATED
         if self._state is not _State.ENTERED:
             raise RuntimeError(
@@ -84,7 +72,6 @@ class Timeout:
     async def __aenter__(self) -> "Timeout":
         self._state = _State.ENTERED
         self._task = tasks.current_task()
-        self._cancelling = self._task.cancelling()
         if self._task is None:
             raise RuntimeError("Timeout should be used inside a task")
         self.reschedule(self._when)
@@ -105,10 +92,10 @@ class Timeout:
         if self._state is _State.EXPIRING:
             self._state = _State.EXPIRED
 
-            if self._task.uncancel() <= self._cancelling and exc_type is exceptions.CancelledError:
-                # Since there are no new cancel requests, we're
+            if self._task.uncancel() == 0 and exc_type is exceptions.CancelledError:
+                # Since there are no outstanding cancel requests, we're
                 # handling this.
-                raise TimeoutError from exc_val
+                raise TimeoutError
         elif self._state is _State.ENTERED:
             self._state = _State.EXITED
 

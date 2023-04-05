@@ -2,7 +2,6 @@
 
 import unittest
 import pickle
-from array import array
 import copy
 from collections import (
     defaultdict, deque, OrderedDict, Counter, UserDict, UserList
@@ -12,7 +11,6 @@ from concurrent.futures import Future
 from concurrent.futures.thread import _WorkItem
 from contextlib import AbstractContextManager, AbstractAsyncContextManager
 from contextvars import ContextVar, Token
-from csv import DictReader, DictWriter
 from dataclasses import Field
 from functools import partial, partialmethod, cached_property
 from graphlib import TopologicalSorter
@@ -31,15 +29,11 @@ try:
     from multiprocessing.managers import ValueProxy
     from multiprocessing.pool import ApplyResult
     from multiprocessing.queues import SimpleQueue as MPSimpleQueue
-    from multiprocessing.queues import Queue as MPQueue
-    from multiprocessing.queues import JoinableQueue as MPJoinableQueue
 except ImportError:
     # _multiprocessing module is optional
     ValueProxy = None
     ApplyResult = None
     MPSimpleQueue = None
-    MPQueue = None
-    MPJoinableQueue = None
 try:
     from multiprocessing.shared_memory import ShareableList
 except ImportError:
@@ -128,14 +122,11 @@ class BaseTest(unittest.TestCase):
                      WeakSet, ReferenceType, ref,
                      ShareableList,
                      Future, _WorkItem,
-                     Morsel,
-                     DictReader, DictWriter,
-                     array]
+                     Morsel]
     if ctypes is not None:
         generic_types.extend((ctypes.Array, ctypes.LibraryLoader))
     if ValueProxy is not None:
-        generic_types.extend((ValueProxy, ApplyResult,
-                              MPSimpleQueue, MPQueue, MPJoinableQueue))
+        generic_types.extend((ValueProxy, ApplyResult, MPSimpleQueue))
 
     def test_subscriptable(self):
         for t in self.generic_types:

@@ -389,7 +389,8 @@ reversed_new_impl(PyTypeObject *type, PyObject *seq)
         return NULL;
 
     ro->index = n-1;
-    ro->seq = Py_NewRef(seq);
+    Py_INCREF(seq);
+    ro->seq = seq;
     return (PyObject *)ro;
 }
 

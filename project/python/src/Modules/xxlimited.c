@@ -155,7 +155,8 @@ Xxo_getattro(XxoObject *self, PyObject *name)
     if (self->x_attr != NULL) {
         PyObject *v = PyDict_GetItemWithError(self->x_attr, name);
         if (v != NULL) {
-            return Py_NewRef(v);
+            Py_INCREF(v);
+            return v;
         }
         else if (PyErr_Occurred()) {
             return NULL;
@@ -209,15 +210,18 @@ Xxo_demo(XxoObject *self, PyTypeObject *defining_class,
 
     /* Test if the argument is "str" */
     if (PyUnicode_Check(o)) {
-        return Py_NewRef(o);
+        Py_INCREF(o);
+        return o;
     }
 
     /* test if the argument is of the Xxo class */
     if (PyObject_TypeCheck(o, defining_class)) {
-        return Py_NewRef(o);
+        Py_INCREF(o);
+        return o;
     }
 
-    return Py_NewRef(Py_None);
+    Py_INCREF(Py_None);
+    return Py_None;
 }
 
 static PyMethodDef Xxo_methods[] = {

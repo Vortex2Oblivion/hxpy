@@ -1524,7 +1524,8 @@ ndarray_getbuf(NDArrayObject *self, Py_buffer *view, int flags)
             return -1;
     }
 
-    view->obj = Py_NewRef(self);
+    view->obj = (PyObject *)self;
+    Py_INCREF(view->obj);
     self->head->exports++;
 
     return 0;
@@ -1787,7 +1788,8 @@ ndarray_subscript(NDArrayObject *self, PyObject *key)
             return unpack_single(base->buf, base->format, base->itemsize);
         }
         else if (key == Py_Ellipsis) {
-            return Py_NewRef(self);
+            Py_INCREF(self);
+            return (PyObject *)self;
         }
         else {
             PyErr_SetString(PyExc_TypeError, "invalid indexing of scalar");
@@ -2019,7 +2021,8 @@ ndarray_get_obj(NDArrayObject *self, void *closure)
     if (base->obj == NULL) {
         Py_RETURN_NONE;
     }
-    return Py_NewRef(base->obj);
+    Py_INCREF(base->obj);
+    return base->obj;
 }
 
 static PyObject *
@@ -2556,7 +2559,8 @@ result:
     PyBuffer_Release(&v2);
 
     ret = equal ? Py_True : Py_False;
-    return Py_NewRef(ret);
+    Py_INCREF(ret);
+    return ret;
 }
 
 static PyObject *
@@ -2593,7 +2597,8 @@ is_contiguous(PyObject *self, PyObject *args)
         PyBuffer_Release(&view);
     }
 
-    return Py_NewRef(ret);
+    Py_INCREF(ret);
+    return ret;
 }
 
 static Py_hash_t
@@ -2743,7 +2748,8 @@ staticarray_getbuf(StaticArrayObject *self, Py_buffer *view, int flags)
         view->obj = NULL; /* Don't use this in new code. */
     }
     else {
-        view->obj = Py_NewRef(self);
+        view->obj = (PyObject *)self;
+        Py_INCREF(view->obj);
     }
 
     return 0;

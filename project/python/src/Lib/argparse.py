@@ -403,18 +403,10 @@ class HelpFormatter(object):
             except ValueError:
                 continue
             else:
-                group_action_count = len(group._group_actions)
-                end = start + group_action_count
+                end = start + len(group._group_actions)
                 if actions[start:end] == group._group_actions:
-
-                    suppressed_actions_count = 0
                     for action in group._group_actions:
                         group_actions.add(action)
-                        if action.help is SUPPRESS:
-                            suppressed_actions_count += 1
-
-                    exposed_actions_count = group_action_count - suppressed_actions_count
-
                     if not group.required:
                         if start in inserts:
                             inserts[start] += ' ['
@@ -424,7 +416,7 @@ class HelpFormatter(object):
                             inserts[end] += ']'
                         else:
                             inserts[end] = ']'
-                    elif exposed_actions_count > 1:
+                    else:
                         if start in inserts:
                             inserts[start] += ' ('
                         else:
@@ -498,6 +490,7 @@ class HelpFormatter(object):
         text = _re.sub(r'(%s) ' % open, r'\1', text)
         text = _re.sub(r' (%s)' % close, r'\1', text)
         text = _re.sub(r'%s *%s' % (open, close), r'', text)
+        text = _re.sub(r'\(([^|]*)\)', r'\1', text)
         text = text.strip()
 
         # return the text
@@ -2172,9 +2165,7 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
             # replace arguments referencing files with the file content
             else:
                 try:
-                    with open(arg_string[1:],
-                              encoding=_sys.getfilesystemencoding(),
-                              errors=_sys.getfilesystemencodeerrors()) as args_file:
+                    with open(arg_string[1:]) as args_file:
                         arg_strings = []
                         for arg_line in args_file.read().splitlines():
                             for arg in self.convert_arg_line_to_args(arg_line):
@@ -2488,11 +2479,9 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
               not action.option_strings):
             if action.default is not None:
                 value = action.default
-                self._check_value(action, value)
             else:
-                # since arg_strings is always [] at this point
-                # there is no need to use self._check_value(action, value)
                 value = arg_strings
+            self._check_value(action, value)
 
         # single argument or optional argument produces a single value
         elif len(arg_strings) == 1 and action.nargs in [None, OPTIONAL]:
@@ -2534,6 +2523,7 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
 
         # ArgumentTypeErrors indicate errors
         except ArgumentTypeError as err:
+            name = getattr(action.type, '__name__', repr(action.type))
             msg = str(err)
             raise ArgumentError(action, msg)
 

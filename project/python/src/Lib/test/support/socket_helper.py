@@ -1,10 +1,8 @@
 import contextlib
 import errno
-import os.path
 import socket
-import sys
-import tempfile
 import unittest
+import sys
 
 from .. import support
 from . import warnings_helper
@@ -63,7 +61,7 @@ def find_unused_port(family=socket.AF_INET, socktype=socket.SOCK_STREAM):
     http://bugs.python.org/issue2550 for more info.  The following site also
     has a very thorough description about the implications of both REUSEADDR
     and EXCLUSIVEADDRUSE on Windows:
-    https://learn.microsoft.com/windows/win32/winsock/using-so-reuseaddr-and-so-exclusiveaddruse
+    http://msdn2.microsoft.com/en-us/library/ms740621(VS.85).aspx)
 
     XXX: although this approach is a vast improvement on previous attempts to
     elicit unused ports, it rests heavily on the assumption that the ephemeral
@@ -272,14 +270,3 @@ def transient_internet(resource_name, *, timeout=_NOT_SET, errnos=()):
     # __cause__ or __context__?
     finally:
         socket.setdefaulttimeout(old_timeout)
-
-
-def create_unix_domain_name():
-    """
-    Create a UNIX domain name: socket.bind() argument of a AF_UNIX socket.
-
-    Return a path relative to the current directory to get a short path
-    (around 27 ASCII characters).
-    """
-    return tempfile.mktemp(prefix="test_python_", suffix='.sock',
-                           dir=os.path.curdir)

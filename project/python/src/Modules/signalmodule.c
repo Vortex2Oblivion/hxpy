@@ -23,6 +23,7 @@
 #endif
 
 #ifdef MS_WINDOWS
+#  include <windows.h>
 #  ifdef HAVE_PROCESS_H
 #    include <process.h>
 #  endif
@@ -99,13 +100,47 @@ class sigset_t_converter(CConverter):
    may not be the thread that received the signal.
 */
 
-#define Handlers _PyRuntime.signals.handlers
-#define wakeup _PyRuntime.signals.wakeup
-#define is_tripped _PyRuntime.signals.is_tripped
+static volatile struct {
+    _Py_atomic_int tripped;
+    /* func is atomic to ensure that PyErr_SetInterrupt is async-signal-safe
+     * (even though it would probably be otherwise, anyway).
+     */
+    _Py_atomic_address func;
+} Handlers[Py_NSIG];
+
+#ifdef MS_WINDOWS
+#define INVALID_FD ((SOCKET_T)-1)
+
+static volatile struct {
+    SOCKET_T fd;
+    int warn_on_full_buffer;
+    int use_send;
+} wakeup = {.fd = INVALID_FD, .warn_on_full_buffer = 1, .use_send = 0};
+#else
+#define INVALID_FD (-1)
+static volatile struct {
+#ifdef __VXWORKS__
+    int fd;
+#else
+    sig_atomic_t fd;
+#endif
+    int warn_on_full_buffer;
+} wakeup = {.fd = INVALID_FD, .warn_on_full_buffer = 1};
+#endif
+
+/* Speed up sigcheck() when none tripped */
+static _Py_atomic_int is_tripped;
+
+typedef struct {
+    PyObject *default_handler;
+    PyObject *ignore_handler;
+#ifdef MS_WINDOWS
+    HANDLE sigint_event;
+#endif
+} signal_state_t;
 
 // State shared by all Python interpreters
-typedef struct _signals_runtime_state signal_state_t;
-#define signal_global_state _PyRuntime.signals
+static signal_state_t signal_global_state = {0};
 
 #if defined(HAVE_GETITIMER) || defined(HAVE_SETITIMER)
 #  define PYHAVE_ITIMER_ERROR
@@ -146,10 +181,6 @@ get_signal_state(PyObject *module)
 static inline int
 compare_handler(PyObject *func, PyObject *dfl_ign_handler)
 {
-    // See https://github.com/python/cpython/pull/102399
-    if (func == NULL || dfl_ign_handler == NULL) {
-        return 0;
-    }
     assert(PyLong_CheckExact(dfl_ign_handler));
     if (!PyLong_CheckExact(func)) {
         return 0;
@@ -236,13 +267,15 @@ signal_default_int_handler_impl(PyObject *module, int signalnum,
 static int
 report_wakeup_write_error(void *data)
 {
+    PyObject *exc, *val, *tb;
     int save_errno = errno;
     errno = (int) (intptr_t) data;
-    PyObject *exc = PyErr_GetRaisedException();
+    PyErr_Fetch(&exc, &val, &tb);
     PyErr_SetFromErrno(PyExc_OSError);
-    _PyErr_WriteUnraisableMsg("when trying to write to the signal wakeup fd",
-                              NULL);
-    PyErr_SetRaisedException(exc);
+    PySys_WriteStderr("Exception ignored when trying to write to the "
+                      "signal wakeup fd:\n");
+    PyErr_WriteUnraisable(NULL);
+    PyErr_Restore(exc, val, tb);
     errno = save_errno;
     return 0;
 }
@@ -251,15 +284,16 @@ report_wakeup_write_error(void *data)
 static int
 report_wakeup_send_error(void* data)
 {
-    int send_errno = (int) (intptr_t) data;
-
-    PyObject *exc = PyErr_GetRaisedException();
+    PyObject *exc, *val, *tb;
+    PyErr_Fetch(&exc, &val, &tb);
     /* PyErr_SetExcFromWindowsErr() invokes FormatMessage() which
        recognizes the error codes used by both GetLastError() and
        WSAGetLastError */
-    PyErr_SetExcFromWindowsErr(PyExc_OSError, send_errno);
-    _PyErr_WriteUnraisableMsg("when trying to send to the signal wakeup fd", NULL);
-    PyErr_SetRaisedException(exc);
+    PyErr_SetExcFromWindowsErr(PyExc_OSError, (int) (intptr_t) data);
+    PySys_WriteStderr("Exception ignored when trying to send to the "
+                      "signal wakeup fd:\n");
+    PyErr_WriteUnraisable(NULL);
+    PyErr_Restore(exc, val, tb);
     return 0;
 }
 #endif   /* MS_WINDOWS */
@@ -298,7 +332,13 @@ trip_signal(int sig_num)
        See bpo-30038 for more details.
     */
 
-    int fd = wakeup.fd;
+    int fd;
+#ifdef MS_WINDOWS
+    fd = Py_SAFE_DOWNCAST(wakeup.fd, SOCKET_T, int);
+#else
+    fd = wakeup.fd;
+#endif
+
     if (fd != INVALID_FD) {
         unsigned char byte = (unsigned char)sig_num;
 #ifdef MS_WINDOWS
@@ -368,7 +408,7 @@ signal_handler(int sig_num)
 #ifdef MS_WINDOWS
     if (sig_num == SIGINT) {
         signal_state_t *state = &signal_global_state;
-        SetEvent((HANDLE)state->sigint_event);
+        SetEvent(state->sigint_event);
     }
 #endif
 }
@@ -783,7 +823,7 @@ signal_set_wakeup_fd(PyObject *self, PyObject *args, PyObject *kwds)
     }
 
     old_sockfd = wakeup.fd;
-    wakeup.fd = Py_SAFE_DOWNCAST(sockfd, SOCKET_T, int);
+    wakeup.fd = sockfd;
     wakeup.warn_on_full_buffer = warn_on_full_buffer;
     wakeup.use_send = is_socket;
 
@@ -834,7 +874,11 @@ PySignal_SetWakeupFd(int fd)
         fd = -1;
     }
 
+#ifdef MS_WINDOWS
+    int old_fd = Py_SAFE_DOWNCAST(wakeup.fd, SOCKET_T, int);
+#else
     int old_fd = wakeup.fd;
+#endif
     wakeup.fd = fd;
     wakeup.warn_on_full_buffer = 1;
     return old_fd;
@@ -1611,8 +1655,6 @@ signal_module_exec(PyObject *m)
     signal_state_t *state = &signal_global_state;
     _signal_module_state *modstate = get_signal_state(m);
 
-    // XXX For proper isolation, these values must be guaranteed
-    // to be effectively const (e.g. immortal).
     modstate->default_handler = state->default_handler;  // borrowed ref
     modstate->ignore_handler = state->ignore_handler;  // borrowed ref
 
@@ -1742,7 +1784,7 @@ _PySignal_Fini(void)
 
 #ifdef MS_WINDOWS
     if (state->sigint_event != NULL) {
-        CloseHandle((HANDLE)state->sigint_event);
+        CloseHandle(state->sigint_event);
         state->sigint_event = NULL;
     }
 #endif
@@ -1757,19 +1799,6 @@ int
 PyErr_CheckSignals(void)
 {
     PyThreadState *tstate = _PyThreadState_GET();
-
-    /* Opportunistically check if the GC is scheduled to run and run it
-       if we have a request. This is done here because native code needs
-       to call this API if is going to run for some time without executing
-       Python code to ensure signals are handled. Checking for the GC here
-       allows long running native code to clean cycles created using the C-API
-       even if it doesn't run the evaluation loop */
-    struct _ceval_state *interp_ceval_state = &tstate->interp->ceval;
-    if (_Py_atomic_load_relaxed(&interp_ceval_state->gc_scheduled)) {
-        _Py_atomic_store_relaxed(&interp_ceval_state->gc_scheduled, 0);
-        _Py_RunGC(tstate);
-    }
-
     if (!_Py_ThreadCanHandleSignals(tstate->interp)) {
         return 0;
     }
@@ -1803,7 +1832,10 @@ _PyErr_CheckSignalsTstate(PyThreadState *tstate)
      */
     _Py_atomic_store(&is_tripped, 0);
 
-    _PyInterpreterFrame *frame = _PyThreadState_GetFrame(tstate);
+    _PyInterpreterFrame *frame = tstate->cframe->current_frame;
+    while (frame && _PyFrame_IsIncomplete(frame)) {
+        frame = frame->previous;
+    }
     signal_state_t *state = &signal_global_state;
     for (int i = 1; i < Py_NSIG; i++) {
         if (!_Py_atomic_load_relaxed(&Handlers[i].tripped)) {
@@ -1965,7 +1997,7 @@ _PySignal_Init(int install_signal_handlers)
 
 #ifdef MS_WINDOWS
     /* Create manual-reset event, initially unset */
-    state->sigint_event = (void *)CreateEvent(NULL, TRUE, FALSE, FALSE);
+    state->sigint_event = CreateEvent(NULL, TRUE, FALSE, FALSE);
     if (state->sigint_event == NULL) {
         PyErr_SetFromWindowsErr(0);
         return -1;

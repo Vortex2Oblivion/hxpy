@@ -13,6 +13,7 @@
 #include "pycore_bytesobject.h"   // _PyBytes_Repeat
 #include "structmember.h"         // PyMemberDef
 #include <stddef.h>               // offsetof()
+#include <stddef.h>
 
 /*[clinic input]
 module array
@@ -57,10 +58,9 @@ typedef struct {
     PyTypeObject *ArrayType;
     PyTypeObject *ArrayIterType;
 
-    PyObject *array_reconstructor;
-
     PyObject *str_read;
     PyObject *str_write;
+    PyObject *str__array_reconstructor;
     PyObject *str___dict__;
     PyObject *str_iter;
 } array_state;
@@ -708,7 +708,8 @@ array_richcompare(PyObject *v, PyObject *w, int op)
             res = Py_False;
         else
             res = Py_True;
-        return Py_NewRef(res);
+        Py_INCREF(res);
+        return res;
     }
 
     if (va->ob_descr == wa->ob_descr && va->ob_descr->compareitems != NULL) {
@@ -731,7 +732,8 @@ array_richcompare(PyObject *v, PyObject *w, int op)
         default: return NULL; /* cannot happen */
         }
         PyObject *res = cmp ? Py_True : Py_False;
-        return Py_NewRef(res);
+        Py_INCREF(res);
+        return res;
     }
 
 
@@ -775,15 +777,18 @@ array_richcompare(PyObject *v, PyObject *w, int op)
             res = Py_True;
         else
             res = Py_False;
-        return Py_NewRef(res);
+        Py_INCREF(res);
+        return res;
     }
 
     /* We have an item that differs.  First, shortcuts for EQ/NE */
     if (op == Py_EQ) {
-        res = Py_NewRef(Py_False);
+        Py_INCREF(Py_False);
+        res = Py_False;
     }
     else if (op == Py_NE) {
-        res = Py_NewRef(Py_True);
+        Py_INCREF(Py_True);
+        res = Py_True;
     }
     else {
         /* Compare the final item again using the proper operator */
@@ -1054,7 +1059,8 @@ array_inplace_concat(arrayobject *self, PyObject *bb)
     }
     if (array_do_extend(state, self, bb) == -1)
         return NULL;
-    return Py_NewRef(self);
+    Py_INCREF(self);
+    return (PyObject *)self;
 }
 
 static PyObject *
@@ -1078,7 +1084,8 @@ array_inplace_repeat(arrayobject *self, Py_ssize_t n)
 
         _PyBytes_Repeat(self->ob_item, n*size, self->ob_item, size);
     }
-    return Py_NewRef(self);
+    Py_INCREF(self);
+    return (PyObject *)self;
 }
 
 
@@ -1772,9 +1779,9 @@ static PyObject *
 array_array___sizeof___impl(arrayobject *self)
 /*[clinic end generated code: output=d8e1c61ebbe3eaed input=805586565bf2b3c6]*/
 {
-    size_t res = _PyObject_SIZE(Py_TYPE(self));
-    res += (size_t)self->allocated * (size_t)self->ob_descr->itemsize;
-    return PyLong_FromSize_t(res);
+    Py_ssize_t res;
+    res = _PyObject_SIZE(Py_TYPE(self)) + self->allocated * self->ob_descr->itemsize;
+    return PyLong_FromSsize_t(res);
 }
 
 
@@ -1939,8 +1946,9 @@ make_array(PyTypeObject *arraytype, char typecode, PyObject *items)
         Py_DECREF(typecode_obj);
         return NULL;
     }
+    Py_INCREF(items);
     PyTuple_SET_ITEM(new_args, 0, typecode_obj);
-    PyTuple_SET_ITEM(new_args, 1, Py_NewRef(items));
+    PyTuple_SET_ITEM(new_args, 1, items);
 
     array_obj = array_new(arraytype, new_args, NULL);
     Py_DECREF(new_args);
@@ -2184,17 +2192,22 @@ array_array___reduce_ex___impl(arrayobject *self, PyTypeObject *cls,
     PyObject *array_str;
     int typecode = self->ob_descr->typecode;
     int mformat_code;
+    static PyObject *array_reconstructor = NULL;
     long protocol;
 
     array_state *state = get_array_state_by_class(cls);
     assert(state != NULL);
 
-    if (state->array_reconstructor == NULL) {
-        state->array_reconstructor = _PyImport_GetModuleAttrString(
-                "array", "_array_reconstructor");
-        if (state->array_reconstructor == NULL) {
+    if (array_reconstructor == NULL) {
+        PyObject *array_module = PyImport_ImportModule("array");
+        if (array_module == NULL)
             return NULL;
-        }
+        array_reconstructor = PyObject_GetAttr(
+            array_module,
+            state->str__array_reconstructor);
+        Py_DECREF(array_module);
+        if (array_reconstructor == NULL)
+            return NULL;
     }
 
     if (!PyLong_Check(value)) {
@@ -2210,7 +2223,8 @@ array_array___reduce_ex___impl(arrayobject *self, PyTypeObject *cls,
         return NULL;
     }
     if (dict == NULL) {
-        dict = Py_NewRef(Py_None);
+        dict = Py_None;
+        Py_INCREF(dict);
     }
 
     mformat_code = typecode_to_mformat_code(typecode);
@@ -2244,10 +2258,8 @@ array_array___reduce_ex___impl(arrayobject *self, PyTypeObject *cls,
         Py_DECREF(dict);
         return NULL;
     }
-
-    assert(state->array_reconstructor != NULL);
     result = Py_BuildValue(
-        "O(OCiN)O", state->array_reconstructor, Py_TYPE(self), typecode,
+        "O(OCiN)O", array_reconstructor, Py_TYPE(self), typecode,
         mformat_code, array_str, dict);
     Py_DECREF(dict);
     return result;
@@ -2297,7 +2309,6 @@ static PyMethodDef array_methods[] = {
     ARRAY_ARRAY_TOBYTES_METHODDEF
     ARRAY_ARRAY_TOUNICODE_METHODDEF
     ARRAY_ARRAY___SIZEOF___METHODDEF
-    {"__class_getitem__", Py_GenericAlias, METH_O|METH_CLASS, PyDoc_STR("See PEP 585")},
     {NULL, NULL}  /* sentinel */
 };
 
@@ -2562,7 +2573,8 @@ array_buffer_getbuf(arrayobject *self, Py_buffer *view, int flags)
     }
 
     view->buf = (void *)self->ob_item;
-    view->obj = Py_NewRef(self);
+    view->obj = (PyObject*)self;
+    Py_INCREF(self);
     if (view->buf == NULL)
         view->buf = (void *)emptybuf;
     view->len = Py_SIZE(self) * self->ob_descr->itemsize;
@@ -2874,7 +2886,8 @@ array_iter(arrayobject *ao)
     if (it == NULL)
         return NULL;
 
-    it->ao = (arrayobject*)Py_NewRef(ao);
+    Py_INCREF(ao);
+    it->ao = ao;
     it->index = 0;
     it->getitem = ao->ob_descr->getitem;
     PyObject_GC_Track(it);
@@ -3005,7 +3018,6 @@ array_traverse(PyObject *module, visitproc visit, void *arg)
     array_state *state = get_array_state(module);
     Py_VISIT(state->ArrayType);
     Py_VISIT(state->ArrayIterType);
-    Py_VISIT(state->array_reconstructor);
     return 0;
 }
 
@@ -3015,9 +3027,9 @@ array_clear(PyObject *module)
     array_state *state = get_array_state(module);
     Py_CLEAR(state->ArrayType);
     Py_CLEAR(state->ArrayIterType);
-    Py_CLEAR(state->array_reconstructor);
     Py_CLEAR(state->str_read);
     Py_CLEAR(state->str_write);
+    Py_CLEAR(state->str__array_reconstructor);
     Py_CLEAR(state->str___dict__);
     Py_CLEAR(state->str_iter);
     return 0;
@@ -3060,10 +3072,10 @@ array_modexec(PyObject *m)
     PyObject *typecodes;
     const struct arraydescr *descr;
 
-    state->array_reconstructor = NULL;
     /* Add interned strings */
     ADD_INTERNED(state, read);
     ADD_INTERNED(state, write);
+    ADD_INTERNED(state, _array_reconstructor);
     ADD_INTERNED(state, __dict__);
     ADD_INTERNED(state, iter);
 
@@ -3071,14 +3083,19 @@ array_modexec(PyObject *m)
     CREATE_TYPE(m, state->ArrayIterType, &arrayiter_spec);
     Py_SET_TYPE(state->ArrayIterType, &PyType_Type);
 
-    if (PyModule_AddObject(m, "ArrayType",
-                           Py_NewRef((PyObject *)state->ArrayType)) < 0) {
+    Py_INCREF((PyObject *)state->ArrayType);
+    if (PyModule_AddObject(m, "ArrayType", (PyObject *)state->ArrayType) < 0) {
         Py_DECREF((PyObject *)state->ArrayType);
         return -1;
     }
 
-    PyObject *mutablesequence = _PyImport_GetModuleAttrString(
-            "collections.abc", "MutableSequence");
+    PyObject *abc_mod = PyImport_ImportModule("collections.abc");
+    if (!abc_mod) {
+        Py_DECREF((PyObject *)state->ArrayType);
+        return -1;
+    }
+    PyObject *mutablesequence = PyObject_GetAttrString(abc_mod, "MutableSequence");
+    Py_DECREF(abc_mod);
     if (!mutablesequence) {
         Py_DECREF((PyObject *)state->ArrayType);
         return -1;

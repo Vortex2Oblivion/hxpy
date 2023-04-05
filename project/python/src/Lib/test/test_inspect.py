@@ -1,4 +1,3 @@
-import asyncio
 import builtins
 import collections
 import datetime
@@ -64,11 +63,6 @@ def revise(filename, *args):
     return (normcase(filename),) + args
 
 git = mod.StupidGit()
-
-
-def tearDownModule():
-    if support.has_socket_support:
-        asyncio.set_event_loop_policy(None)
 
 
 def signatures_with_lexicographic_keyword_only_parameters():
@@ -207,59 +201,6 @@ class TestPredicates(IsTestBase):
                 functools.partial(functools.partial(
                     gen_coroutine_function_example))))
         self.assertTrue(inspect.isgenerator(gen_coro))
-
-        async def _fn3():
-            pass
-
-        @inspect.markcoroutinefunction
-        def fn3():
-            return _fn3()
-
-        self.assertTrue(inspect.iscoroutinefunction(fn3))
-        self.assertTrue(
-            inspect.iscoroutinefunction(
-                inspect.markcoroutinefunction(lambda: _fn3())
-            )
-        )
-
-        class Cl:
-            async def __call__(self):
-                pass
-
-        self.assertFalse(inspect.iscoroutinefunction(Cl))
-        # instances with async def __call__ are NOT recognised.
-        self.assertFalse(inspect.iscoroutinefunction(Cl()))
-        # unless explicitly marked.
-        self.assertTrue(inspect.iscoroutinefunction(
-            inspect.markcoroutinefunction(Cl())
-        ))
-
-        class Cl2:
-            @inspect.markcoroutinefunction
-            def __call__(self):
-                pass
-
-        self.assertFalse(inspect.iscoroutinefunction(Cl2))
-        # instances with marked __call__ are NOT recognised.
-        self.assertFalse(inspect.iscoroutinefunction(Cl2()))
-        # unless explicitly marked.
-        self.assertTrue(inspect.iscoroutinefunction(
-            inspect.markcoroutinefunction(Cl2())
-        ))
-
-        class Cl3:
-            @inspect.markcoroutinefunction
-            @classmethod
-            def do_something_classy(cls):
-                pass
-
-            @inspect.markcoroutinefunction
-            @staticmethod
-            def do_something_static():
-                pass
-
-        self.assertTrue(inspect.iscoroutinefunction(Cl3.do_something_classy))
-        self.assertTrue(inspect.iscoroutinefunction(Cl3.do_something_static))
 
         self.assertFalse(
             inspect.iscoroutinefunction(unittest.mock.Mock()))
@@ -430,7 +371,7 @@ class TestInterpreterStack(IsTestBase):
         git.abuse(7, 8, 9)
 
     def test_abuse_done(self):
-        self.istest(inspect.istraceback, 'git.ex.__traceback__')
+        self.istest(inspect.istraceback, 'git.ex[2]')
         self.istest(inspect.isframe, 'mod.fr')
 
     def test_stack(self):
@@ -2327,109 +2268,6 @@ class TestGetCoroutineState(unittest.TestCase):
                          {'a': None, 'gencoro': gencoro, 'b': 'spam'})
 
 
-@support.requires_working_socket()
-class TestGetAsyncGenState(unittest.IsolatedAsyncioTestCase):
-
-    def setUp(self):
-        async def number_asyncgen():
-            for number in range(5):
-                yield number
-        self.asyncgen = number_asyncgen()
-
-    async def asyncTearDown(self):
-        await self.asyncgen.aclose()
-
-    def _asyncgenstate(self):
-        return inspect.getasyncgenstate(self.asyncgen)
-
-    def test_created(self):
-        self.assertEqual(self._asyncgenstate(), inspect.AGEN_CREATED)
-
-    async def test_suspended(self):
-        value = await anext(self.asyncgen)
-        self.assertEqual(self._asyncgenstate(), inspect.AGEN_SUSPENDED)
-        self.assertEqual(value, 0)
-
-    async def test_closed_after_exhaustion(self):
-        countdown = 7
-        with self.assertRaises(StopAsyncIteration):
-            while countdown := countdown - 1:
-                await anext(self.asyncgen)
-        self.assertEqual(countdown, 1)
-        self.assertEqual(self._asyncgenstate(), inspect.AGEN_CLOSED)
-
-    async def test_closed_after_immediate_exception(self):
-        with self.assertRaises(RuntimeError):
-            await self.asyncgen.athrow(RuntimeError)
-        self.assertEqual(self._asyncgenstate(), inspect.AGEN_CLOSED)
-
-    async def test_running(self):
-        async def running_check_asyncgen():
-            for number in range(5):
-                self.assertEqual(self._asyncgenstate(), inspect.AGEN_RUNNING)
-                yield number
-                self.assertEqual(self._asyncgenstate(), inspect.AGEN_RUNNING)
-        self.asyncgen = running_check_asyncgen()
-        # Running up to the first yield
-        await anext(self.asyncgen)
-        self.assertEqual(self._asyncgenstate(), inspect.AGEN_SUSPENDED)
-        # Running after the first yield
-        await anext(self.asyncgen)
-        self.assertEqual(self._asyncgenstate(), inspect.AGEN_SUSPENDED)
-
-    def test_easy_debugging(self):
-        # repr() and str() of a asyncgen state should contain the state name
-        names = 'AGEN_CREATED AGEN_RUNNING AGEN_SUSPENDED AGEN_CLOSED'.split()
-        for name in names:
-            state = getattr(inspect, name)
-            self.assertIn(name, repr(state))
-            self.assertIn(name, str(state))
-
-    async def test_getasyncgenlocals(self):
-        async def each(lst, a=None):
-            b=(1, 2, 3)
-            for v in lst:
-                if v == 3:
-                    c = 12
-                yield v
-
-        numbers = each([1, 2, 3])
-        self.assertEqual(inspect.getasyncgenlocals(numbers),
-                         {'a': None, 'lst': [1, 2, 3]})
-        await anext(numbers)
-        self.assertEqual(inspect.getasyncgenlocals(numbers),
-                         {'a': None, 'lst': [1, 2, 3], 'v': 1,
-                          'b': (1, 2, 3)})
-        await anext(numbers)
-        self.assertEqual(inspect.getasyncgenlocals(numbers),
-                         {'a': None, 'lst': [1, 2, 3], 'v': 2,
-                          'b': (1, 2, 3)})
-        await anext(numbers)
-        self.assertEqual(inspect.getasyncgenlocals(numbers),
-                         {'a': None, 'lst': [1, 2, 3], 'v': 3,
-                          'b': (1, 2, 3), 'c': 12})
-        with self.assertRaises(StopAsyncIteration):
-            await anext(numbers)
-        self.assertEqual(inspect.getasyncgenlocals(numbers), {})
-
-    async def test_getasyncgenlocals_empty(self):
-        async def yield_one():
-            yield 1
-        one = yield_one()
-        self.assertEqual(inspect.getasyncgenlocals(one), {})
-        await anext(one)
-        self.assertEqual(inspect.getasyncgenlocals(one), {})
-        with self.assertRaises(StopAsyncIteration):
-            await anext(one)
-        self.assertEqual(inspect.getasyncgenlocals(one), {})
-
-    def test_getasyncgenlocals_error(self):
-        self.assertRaises(TypeError, inspect.getasyncgenlocals, 1)
-        self.assertRaises(TypeError, inspect.getasyncgenlocals, lambda x: True)
-        self.assertRaises(TypeError, inspect.getasyncgenlocals, set)
-        self.assertRaises(TypeError, inspect.getasyncgenlocals, (2,3))
-
-
 class MySignature(inspect.Signature):
     # Top-level to make it picklable;
     # used in test_signature_object_pickle
@@ -3400,25 +3238,6 @@ class TestSignatureObject(unittest.TestCase):
                          ((('a', 10, ..., "positional_or_keyword"),),
                           ...))
 
-    def test_signature_on_mocks(self):
-        # https://github.com/python/cpython/issues/96127
-        for mock in (
-            unittest.mock.Mock(),
-            unittest.mock.AsyncMock(),
-            unittest.mock.MagicMock(),
-        ):
-            with self.subTest(mock=mock):
-                self.assertEqual(str(inspect.signature(mock)), '(*args, **kwargs)')
-
-    def test_signature_on_noncallable_mocks(self):
-        for mock in (
-            unittest.mock.NonCallableMock(),
-            unittest.mock.NonCallableMagicMock(),
-        ):
-            with self.subTest(mock=mock):
-                with self.assertRaises(TypeError):
-                    inspect.signature(mock)
-
     def test_signature_equality(self):
         def foo(a, *, b:int) -> float: pass
         self.assertFalse(inspect.signature(foo) == 42)
@@ -3795,38 +3614,6 @@ class TestSignatureObject(unittest.TestCase):
                 self.assertEqual(signature_func(foo), inspect.Signature())
         self.assertEqual(inspect.get_annotations(foo), {})
 
-    def test_signature_as_str(self):
-        self.maxDiff = None
-        class S:
-            __signature__ = '(a, b=2)'
-
-        self.assertEqual(self.signature(S),
-                         ((('a', ..., ..., 'positional_or_keyword'),
-                           ('b', 2, ..., 'positional_or_keyword')),
-                          ...))
-
-    def test_signature_as_callable(self):
-        # __signature__ should be either a staticmethod or a bound classmethod
-        class S:
-            @classmethod
-            def __signature__(cls):
-                return '(a, b=2)'
-
-        self.assertEqual(self.signature(S),
-                         ((('a', ..., ..., 'positional_or_keyword'),
-                           ('b', 2, ..., 'positional_or_keyword')),
-                          ...))
-
-        class S:
-            @staticmethod
-            def __signature__():
-                return '(a, b=2)'
-
-        self.assertEqual(self.signature(S),
-                         ((('a', ..., ..., 'positional_or_keyword'),
-                           ('b', 2, ..., 'positional_or_keyword')),
-                          ...))
-
 
 class TestParameterObject(unittest.TestCase):
     def test_signature_parameter_kinds(self):
@@ -4122,8 +3909,7 @@ class TestSignatureBind(unittest.TestCase):
             self.call(test, 1, bar=2, spam='ham')
 
         with self.assertRaisesRegex(TypeError,
-                                     "missing a required keyword-only "
-                                     "argument: 'bar'"):
+                                     "missing a required argument: 'bar'"):
             self.call(test, 1)
 
         def test(foo, *, bar, **bin):
@@ -4339,47 +4125,56 @@ class TestBoundArguments(unittest.TestCase):
 
 class TestSignaturePrivateHelpers(unittest.TestCase):
     def _strip_non_python_syntax(self, input,
-        clean_signature, self_parameter):
+        clean_signature, self_parameter, last_positional_only):
         computed_clean_signature, \
-            computed_self_parameter = \
+            computed_self_parameter, \
+            computed_last_positional_only = \
             inspect._signature_strip_non_python_syntax(input)
         self.assertEqual(computed_clean_signature, clean_signature)
         self.assertEqual(computed_self_parameter, self_parameter)
+        self.assertEqual(computed_last_positional_only, last_positional_only)
 
     def test_signature_strip_non_python_syntax(self):
         self._strip_non_python_syntax(
             "($module, /, path, mode, *, dir_fd=None, " +
                 "effective_ids=False,\n       follow_symlinks=True)",
-            "(module, /, path, mode, *, dir_fd=None, " +
+            "(module, path, mode, *, dir_fd=None, " +
                 "effective_ids=False, follow_symlinks=True)",
+            0,
             0)
 
         self._strip_non_python_syntax(
             "($module, word, salt, /)",
-            "(module, word, salt, /)",
-            0)
+            "(module, word, salt)",
+            0,
+            2)
 
         self._strip_non_python_syntax(
             "(x, y=None, z=None, /)",
-            "(x, y=None, z=None, /)",
-            None)
+            "(x, y=None, z=None)",
+            None,
+            2)
 
         self._strip_non_python_syntax(
             "(x, y=None, z=None)",
             "(x, y=None, z=None)",
+            None,
             None)
 
         self._strip_non_python_syntax(
             "(x,\n    y=None,\n      z = None  )",
             "(x, y=None, z=None)",
+            None,
             None)
 
         self._strip_non_python_syntax(
             "",
             "",
+            None,
             None)
 
         self._strip_non_python_syntax(
+            None,
             None,
             None,
             None)
@@ -4600,11 +4395,8 @@ class TestMain(unittest.TestCase):
                                         'unittest', '--details')
         output = out.decode()
         # Just a quick sanity check on the output
-        self.assertIn(module.__spec__.name, output)
         self.assertIn(module.__name__, output)
-        self.assertIn(module.__spec__.origin, output)
         self.assertIn(module.__file__, output)
-        self.assertIn(module.__spec__.cached, output)
         self.assertIn(module.__cached__, output)
         self.assertEqual(err, b'')
 

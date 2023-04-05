@@ -9,7 +9,6 @@ import sys
 import threading
 import unittest
 from unittest import mock
-import warnings
 from test.support import socket_helper
 try:
     import ssl
@@ -792,14 +791,11 @@ os.close(fd)
         protocol = asyncio.StreamReaderProtocol(reader, loop=self.loop)
         transport, _ = self.loop.run_until_complete(
             self.loop.connect_read_pipe(lambda: protocol, pipe))
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore', DeprecationWarning)
-            watcher = asyncio.SafeChildWatcher()
+
+        watcher = asyncio.SafeChildWatcher()
         watcher.attach_loop(self.loop)
         try:
-            with warnings.catch_warnings():
-                warnings.simplefilter('ignore', DeprecationWarning)
-                asyncio.set_child_watcher(watcher)
+            asyncio.set_child_watcher(watcher)
             create = asyncio.create_subprocess_exec(
                 *args,
                 pass_fds={wfd},
@@ -807,9 +803,7 @@ os.close(fd)
             proc = self.loop.run_until_complete(create)
             self.loop.run_until_complete(proc.wait())
         finally:
-            with warnings.catch_warnings():
-                warnings.simplefilter('ignore', DeprecationWarning)
-                asyncio.set_child_watcher(None)
+            asyncio.set_child_watcher(None)
 
         os.close(wfd)
         data = self.loop.run_until_complete(reader.read(-1))
@@ -831,7 +825,7 @@ os.close(fd)
     def test_streamreader_constructor_use_global_loop(self):
         # asyncio issue #184: Ensure that StreamReaderProtocol constructor
         # retrieves the current loop if the loop parameter is not set
-        # Deprecated in 3.10, undeprecated in 3.12
+        # Deprecated in 3.10, undeprecated in 3.11.1
         self.addCleanup(asyncio.set_event_loop, None)
         asyncio.set_event_loop(self.loop)
         reader = asyncio.StreamReader()
@@ -855,7 +849,7 @@ os.close(fd)
     def test_streamreaderprotocol_constructor_use_global_loop(self):
         # asyncio issue #184: Ensure that StreamReaderProtocol constructor
         # retrieves the current loop if the loop parameter is not set
-        # Deprecated in 3.10, undeprecated in 3.12
+        # Deprecated in 3.10, undeprecated in 3.11.1
         self.addCleanup(asyncio.set_event_loop, None)
         asyncio.set_event_loop(self.loop)
         reader = mock.Mock()

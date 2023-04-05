@@ -40,9 +40,6 @@ def master_open():
     Open a pty master and return the fd, and the filename of the slave end.
     Deprecated, use openpty() instead."""
 
-    import warnings
-    warnings.warn("Use pty.openpty() instead.", DeprecationWarning, stacklevel=2)  # Remove API in 3.14
-
     try:
         master_fd, slave_fd = os.openpty()
     except (AttributeError, OSError):
@@ -71,9 +68,6 @@ def slave_open(tty_name):
     Open the pty slave and acquire the controlling terminal, returning
     opened filedescriptor.
     Deprecated, use openpty() instead."""
-
-    import warnings
-    warnings.warn("Use pty.openpty() instead.", DeprecationWarning, stacklevel=2)  # Remove API in 3.14
 
     result = os.open(tty_name, os.O_RDWR)
     try:
@@ -107,8 +101,20 @@ def fork():
     master_fd, slave_fd = openpty()
     pid = os.fork()
     if pid == CHILD:
+        # Establish a new session.
+        os.setsid()
         os.close(master_fd)
-        os.login_tty(slave_fd)
+
+        # Slave becomes stdin/stdout/stderr of child.
+        os.dup2(slave_fd, STDIN_FILENO)
+        os.dup2(slave_fd, STDOUT_FILENO)
+        os.dup2(slave_fd, STDERR_FILENO)
+        if slave_fd > STDERR_FILENO:
+            os.close(slave_fd)
+
+        # Explicitly open the tty to make it become a controlling tty.
+        tmp_fd = os.open(os.ttyname(STDOUT_FILENO), os.O_RDWR)
+        os.close(tmp_fd)
     else:
         os.close(slave_fd)
 
@@ -156,7 +162,7 @@ def _copy(master_fd, master_read=_read, stdin_read=_read):
 
 def spawn(argv, master_read=_read, stdin_read=_read):
     """Create a spawned process."""
-    if isinstance(argv, str):
+    if type(argv) == type(''):
         argv = (argv,)
     sys.audit('pty.spawn', argv)
 

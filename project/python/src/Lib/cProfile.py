@@ -7,7 +7,6 @@
 __all__ = ["run", "runctx", "Profile"]
 
 import _lsprof
-import importlib.machinery
 import profile as _pyprofile
 
 # ____________________________________________________________
@@ -170,12 +169,9 @@ def main():
             sys.path.insert(0, os.path.dirname(progname))
             with open(progname, 'rb') as fp:
                 code = compile(fp.read(), progname, 'exec')
-            spec = importlib.machinery.ModuleSpec(name='__main__', loader=None,
-                                                  origin=progname)
             globs = {
-                '__spec__': spec,
-                '__file__': spec.origin,
-                '__name__': spec.name,
+                '__file__': progname,
+                '__name__': '__main__',
                 '__package__': None,
                 '__cached__': None,
             }

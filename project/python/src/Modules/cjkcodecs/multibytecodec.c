@@ -141,7 +141,8 @@ codecctx_errors_get(MultibyteStatefulCodecContext *self, void *Py_UNUSED(ignored
     else if (self->errors == ERROR_REPLACE)
         errors = "replace";
     else {
-        return Py_NewRef(self->errors);
+        Py_INCREF(self->errors);
+        return self->errors;
     }
 
     return PyUnicode_FromString(errors);
@@ -340,7 +341,8 @@ multibytecodec_encerror(MultibyteCodec *codec,
             goto errorexit;
     }
     else {
-        retstr = Py_NewRef(tobj);
+        Py_INCREF(tobj);
+        retstr = tobj;
     }
 
     assert(PyBytes_Check(retstr));
@@ -784,9 +786,11 @@ encoder_encode_stateful(MultibyteStatefulEncoderContext *ctx,
     if (ctx->pending) {
         PyObject *inbuf_tmp;
 
-        origpending = Py_NewRef(ctx->pending);
+        Py_INCREF(ctx->pending);
+        origpending = ctx->pending;
 
-        inbuf_tmp = Py_NewRef(ctx->pending);
+        Py_INCREF(ctx->pending);
+        inbuf_tmp = ctx->pending;
         PyUnicode_Append(&inbuf_tmp, unistr);
         if (inbuf_tmp == NULL)
             goto errorexit;
@@ -796,7 +800,8 @@ encoder_encode_stateful(MultibyteStatefulEncoderContext *ctx,
     else {
         origpending = NULL;
 
-        inbuf = Py_NewRef(unistr);
+        Py_INCREF(unistr);
+        inbuf = unistr;
     }
     if (PyUnicode_READY(inbuf) < 0)
         goto errorexit;
@@ -893,14 +898,14 @@ decoder_feed_buffer(MultibyteStatefulDecoderContext *ctx,
 _multibytecodec.MultibyteIncrementalEncoder.encode
 
     input: object
-    final: bool = False
+    final: bool(accept={int}) = False
 [clinic start generated code]*/
 
 static PyObject *
 _multibytecodec_MultibyteIncrementalEncoder_encode_impl(MultibyteIncrementalEncoderObject *self,
                                                         PyObject *input,
                                                         int final)
-/*[clinic end generated code: output=123361b6c505e2c1 input=bd5f7d40d43e99b0]*/
+/*[clinic end generated code: output=123361b6c505e2c1 input=093a1ddbb2fc6721]*/
 {
     return encoder_encode_stateful(STATEFUL_ECTX(self), input, final);
 }
@@ -980,7 +985,8 @@ _multibytecodec_MultibyteIncrementalEncoder_setstate_impl(MultibyteIncrementalEn
         goto errorexit;
     }
 
-    Py_XSETREF(self->pending, pending);
+    Py_CLEAR(self->pending);
+    self->pending = pending;
     memcpy(self->state.c, statebytes+1+statebytes[0],
            sizeof(self->state.c));
 
@@ -1114,14 +1120,14 @@ static PyType_Spec encoder_spec = {
 _multibytecodec.MultibyteIncrementalDecoder.decode
 
     input: Py_buffer
-    final: bool = False
+    final: bool(accept={int}) = False
 [clinic start generated code]*/
 
 static PyObject *
 _multibytecodec_MultibyteIncrementalDecoder_decode_impl(MultibyteIncrementalDecoderObject *self,
                                                         Py_buffer *input,
                                                         int final)
-/*[clinic end generated code: output=b9b9090e8a9ce2ba input=8795fbb20860027a]*/
+/*[clinic end generated code: output=b9b9090e8a9ce2ba input=c9132b24d503eb1d]*/
 {
     MultibyteDecodeBuffer buf;
     char *data, *wdata = NULL;
@@ -1437,7 +1443,8 @@ mbstreamreader_iread(MultibyteStreamReaderObject *self,
             memcpy(ctrdata + self->pendingsize,
                     PyBytes_AS_STRING(cres),
                     PyBytes_GET_SIZE(cres));
-            Py_SETREF(cres, ctr);
+            Py_DECREF(cres);
+            cres = ctr;
             self->pendingsize = 0;
         }
 
@@ -1463,7 +1470,8 @@ mbstreamreader_iread(MultibyteStreamReaderObject *self,
                 goto errorexit;
         }
 
-        Py_SETREF(cres, NULL);
+        Py_DECREF(cres);
+        cres = NULL;
 
         if (sizehint < 0 || buf.writer.pos != 0 || rsize == 0)
             break;
@@ -1637,7 +1645,8 @@ mbstreamreader_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     }
 
     self->codec = ((MultibyteCodecObject *)codec)->codec;
-    self->stream = Py_NewRef(stream);
+    self->stream = stream;
+    Py_INCREF(stream);
     self->pendingsize = 0;
     self->errors = internal_error_callback(errors);
     if (self->errors == NULL)
@@ -1860,7 +1869,8 @@ mbstreamwriter_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     }
 
     self->codec = ((MultibyteCodecObject *)codec)->codec;
-    self->stream = Py_NewRef(stream);
+    self->stream = stream;
+    Py_INCREF(stream);
     self->pending = NULL;
     self->errors = internal_error_callback(errors);
     if (self->errors == NULL)

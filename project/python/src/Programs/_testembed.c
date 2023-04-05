@@ -1,6 +1,7 @@
 #ifndef Py_BUILD_CORE_MODULE
 #  define Py_BUILD_CORE_MODULE
 #endif
+#define NEEDS_PY_IDENTIFIER
 
 /* Always enable assertion (even in release mode) */
 #undef NDEBUG
@@ -9,6 +10,7 @@
 #include "pycore_initconfig.h"    // _PyConfig_InitCompatConfig()
 #include "pycore_runtime.h"       // _PyRuntime
 #include "pycore_import.h"        // _PyImport_FrozenBootstrap
+#include <Python.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>               // putenv()
@@ -702,8 +704,7 @@ static int test_init_from_config(void)
 
     config.safe_path = 1;
 
-    putenv("PYTHONINTMAXSTRDIGITS=6666");
-    config.int_max_str_digits = 31337;
+    config._isolated_interpreter = 1;
 
     init_from_config_clear(&config);
 
@@ -770,7 +771,6 @@ static void set_most_env_vars(void)
     putenv("PYTHONIOENCODING=iso8859-1:replace");
     putenv("PYTHONPLATLIBDIR=env_platlibdir");
     putenv("PYTHONSAFEPATH=1");
-    putenv("PYTHONINTMAXSTRDIGITS=4567");
 }
 
 
@@ -1889,14 +1889,7 @@ static int test_unicode_id_init(void)
 {
     // bpo-42882: Test that _PyUnicode_FromId() works
     // when Python is initialized multiples times.
-
-    // This is equivalent to `_Py_IDENTIFIER(test_unicode_id_init)`
-    // but since `_Py_IDENTIFIER` is disabled when `Py_BUILD_CORE`
-    // is defined, it is manually expanded here.
-    static _Py_Identifier PyId_test_unicode_id_init = {
-        .string = "test_unicode_id_init",
-        .index = -1,
-    };
+    _Py_IDENTIFIER(test_unicode_id_init);
 
     // Initialize Python once without using the identifier
     _testembed_Py_InitializeFromConfig();
@@ -1923,18 +1916,6 @@ static int test_unicode_id_init(void)
 
         Py_Finalize();
     }
-    return 0;
-}
-
-
-static int test_init_main_interpreter_settings(void)
-{
-    _testembed_Py_Initialize();
-    (void) PyRun_SimpleStringFlags(
-        "import _testinternalcapi, json; "
-        "print(json.dumps(_testinternalcapi.get_interp_settings(0)))",
-        0);
-    Py_Finalize();
     return 0;
 }
 
@@ -2126,7 +2107,6 @@ static struct TestCase TestCases[] = {
     {"test_run_main_loop", test_run_main_loop},
     {"test_get_argc_argv", test_get_argc_argv},
     {"test_init_use_frozen_modules", test_init_use_frozen_modules},
-    {"test_init_main_interpreter_settings", test_init_main_interpreter_settings},
 
     // Audit
     {"test_open_code_hook", test_open_code_hook},

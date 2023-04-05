@@ -334,12 +334,7 @@ From ast_for_arguments():
 >>> def f(x, y=1, z):
 ...     pass
 Traceback (most recent call last):
-SyntaxError: parameter without a default follows parameter with a default
-
->>> def f(x, /, y=1, z):
-...     pass
-Traceback (most recent call last):
-SyntaxError: parameter without a default follows parameter with a default
+SyntaxError: non-default argument follows default argument
 
 >>> def f(x, None):
 ...     pass
@@ -560,14 +555,6 @@ SyntaxError: expected default value expression
 Traceback (most recent call last):
 SyntaxError: expected default value expression
 
->>> lambda a,d=3,c: None
-Traceback (most recent call last):
-SyntaxError: parameter without a default follows parameter with a default
-
->>> lambda a,/,d=3,c: None
-Traceback (most recent call last):
-SyntaxError: parameter without a default follows parameter with a default
-
 >>> import ast; ast.parse('''
 ... def f(
 ...     *, # type: int
@@ -756,27 +743,6 @@ SyntaxError: cannot assign to __debug__
 >>> __debug__: int
 Traceback (most recent call last):
 SyntaxError: cannot assign to __debug__
->>> f(a=)
-Traceback (most recent call last):
-SyntaxError: expected argument value expression
->>> f(a, b, c=)
-Traceback (most recent call last):
-SyntaxError: expected argument value expression
->>> f(a, b, c=, d)
-Traceback (most recent call last):
-SyntaxError: expected argument value expression
->>> f(*args=[0])
-Traceback (most recent call last):
-SyntaxError: cannot assign to iterable argument unpacking
->>> f(a, b, *args=[0])
-Traceback (most recent call last):
-SyntaxError: cannot assign to iterable argument unpacking
->>> f(**kwargs={'a': 1})
-Traceback (most recent call last):
-SyntaxError: cannot assign to keyword argument unpacking
->>> f(a, b, *args, **kwargs={'a': 1})
-Traceback (most recent call last):
-SyntaxError: cannot assign to keyword argument unpacking
 
 
 More set_context():
@@ -1604,22 +1570,6 @@ SyntaxError: trailing comma not allowed without surrounding parentheses
 >>> from t import x,y,
 Traceback (most recent call last):
 SyntaxError: trailing comma not allowed without surrounding parentheses
-
->>> import a from b
-Traceback (most recent call last):
-SyntaxError: Did you mean to use 'from ... import ...' instead?
-
->>> import a.y.z from b.y.z
-Traceback (most recent call last):
-SyntaxError: Did you mean to use 'from ... import ...' instead?
-
->>> import a from b as bar
-Traceback (most recent call last):
-SyntaxError: Did you mean to use 'from ... import ...' instead?
-
->>> import a.y.z from b.y.z as bar
-Traceback (most recent call last):
-SyntaxError: Did you mean to use 'from ... import ...' instead?
 
 # Check that we dont raise the "trailing comma" error if there is more
 # input to the left of the valid part that we parsed.

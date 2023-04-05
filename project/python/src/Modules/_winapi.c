@@ -39,11 +39,8 @@
 #include "structmember.h"         // PyMemberDef
 
 
-#ifndef WINDOWS_LEAN_AND_MEAN
 #define WINDOWS_LEAN_AND_MEAN
-#endif
 #include "windows.h"
-#include <winioctl.h>
 #include <crtdbg.h>
 #include "winreparse.h"
 
@@ -66,13 +63,22 @@
 
 #define T_HANDLE T_POINTER
 
-// winbase.h limits the STARTF_* flags to the desktop API as of 10.0.19041.
-#ifndef STARTF_USESHOWWINDOW
-#define STARTF_USESHOWWINDOW 0x00000001
-#endif
-#ifndef STARTF_USESTDHANDLES
-#define STARTF_USESTDHANDLES 0x00000100
-#endif
+/* Grab CancelIoEx dynamically from kernel32 */
+static int has_CancelIoEx = -1;
+static BOOL (CALLBACK *Py_CancelIoEx)(HANDLE, LPOVERLAPPED);
+
+static int
+check_CancelIoEx()
+{
+    if (has_CancelIoEx == -1)
+    {
+        HINSTANCE hKernel32 = GetModuleHandle("KERNEL32");
+        * (FARPROC *) &Py_CancelIoEx = GetProcAddress(hKernel32,
+                                                      "CancelIoEx");
+        has_CancelIoEx = (Py_CancelIoEx != NULL);
+    }
+    return has_CancelIoEx;
+}
 
 typedef struct {
     PyTypeObject *overlapped_type;
@@ -128,7 +134,8 @@ overlapped_dealloc(OverlappedObject *self)
 
     PyObject_GC_UnTrack(self);
     if (self->pending) {
-        if (CancelIoEx(self->handle, &self->overlapped) &&
+        if (check_CancelIoEx() &&
+            Py_CancelIoEx(self->handle, &self->overlapped) &&
             GetOverlappedResult(self->handle, &self->overlapped, &bytes, TRUE))
         {
             /* The operation is no longer pending -- nothing to do. */
@@ -284,7 +291,8 @@ _winapi_Overlapped_getbuffer_impl(OverlappedObject *self)
         return NULL;
     }
     res = self->read_buffer ? self->read_buffer : Py_None;
-    return Py_NewRef(res);
+    Py_INCREF(res);
+    return res;
 }
 
 /*[clinic input]
@@ -299,7 +307,10 @@ _winapi_Overlapped_cancel_impl(OverlappedObject *self)
 
     if (self->pending) {
         Py_BEGIN_ALLOW_THREADS
-        res = CancelIoEx(self->handle, &self->overlapped);
+        if (check_CancelIoEx())
+            res = Py_CancelIoEx(self->handle, &self->overlapped);
+        else
+            res = CancelIo(self->handle);
         Py_END_ALLOW_THREADS
     }
 
@@ -394,13 +405,13 @@ _winapi_CloseHandle_impl(PyObject *module, HANDLE handle)
 _winapi.ConnectNamedPipe
 
     handle: HANDLE
-    overlapped as use_overlapped: bool = False
+    overlapped as use_overlapped: bool(accept={int}) = False
 [clinic start generated code]*/
 
 static PyObject *
 _winapi_ConnectNamedPipe_impl(PyObject *module, HANDLE handle,
                               int use_overlapped)
-/*[clinic end generated code: output=335a0e7086800671 input=a80e56e8bd370e31]*/
+/*[clinic end generated code: output=335a0e7086800671 input=34f937c1c86e5e68]*/
 {
     BOOL success;
     OverlappedObject *overlapped = NULL;
@@ -645,10 +656,8 @@ _winapi_CreateJunction_impl(PyObject *module, LPCWSTR src_path,
 cleanup:
     ret = GetLastError();
 
-    if (token != NULL)
-        CloseHandle(token);
-    if (junction != NULL)
-        CloseHandle(junction);
+    CloseHandle(token);
+    CloseHandle(junction);
     PyMem_RawFree(rdb);
 
     if (ret != 0)
@@ -1080,6 +1089,14 @@ _winapi_CreateProcess_impl(PyObject *module,
         return NULL;
     }
 
+    PyInterpreterState *interp = PyInterpreterState_Get();
+    const PyConfig *config = _PyInterpreterState_GetConfig(interp);
+    if (config->_isolated_interpreter) {
+        PyErr_SetString(PyExc_RuntimeError,
+                        "subprocess not supported for isolated subinterpreters");
+        return NULL;
+    }
+
     ZeroMemory(&si, sizeof(si));
     si.StartupInfo.cb = sizeof(si);
 
@@ -1212,10 +1229,8 @@ _winapi_ExitProcess_impl(PyObject *module, UINT ExitCode)
 /*[clinic end generated code: output=a387deb651175301 input=4f05466a9406c558]*/
 {
     #if defined(Py_DEBUG)
-#ifdef MS_WINDOWS_DESKTOP
         SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOALIGNMENTFAULTEXCEPT|
                      SEM_NOGPFAULTERRORBOX|SEM_NOOPENFILEERRORBOX);
-#endif
         _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_DEBUG);
     #endif
 
@@ -1524,42 +1539,66 @@ _winapi_PeekNamedPipe_impl(PyObject *module, HANDLE handle, int size)
 /*[clinic input]
 _winapi.LCMapStringEx
 
-    locale: LPCWSTR
+    locale: unicode
     flags: DWORD
-    src: LPCWSTR
+    src: unicode
 
 [clinic start generated code]*/
 
 static PyObject *
-_winapi_LCMapStringEx_impl(PyObject *module, LPCWSTR locale, DWORD flags,
-                           LPCWSTR src)
-/*[clinic end generated code: output=cf4713d80e2b47c9 input=9fe26f95d5ab0001]*/
+_winapi_LCMapStringEx_impl(PyObject *module, PyObject *locale, DWORD flags,
+                           PyObject *src)
+/*[clinic end generated code: output=8ea4c9d85a4a1f23 input=2fa6ebc92591731b]*/
 {
     if (flags & (LCMAP_SORTHANDLE | LCMAP_HASH | LCMAP_BYTEREV |
                  LCMAP_SORTKEY)) {
         return PyErr_Format(PyExc_ValueError, "unsupported flags");
     }
 
-    int dest_size = LCMapStringEx(locale, flags, src, -1, NULL, 0,
+    wchar_t *locale_ = PyUnicode_AsWideCharString(locale, NULL);
+    if (!locale_) {
+        return NULL;
+    }
+    Py_ssize_t srcLenAsSsize;
+    int srcLen;
+    wchar_t *src_ = PyUnicode_AsWideCharString(src, &srcLenAsSsize);
+    if (!src_) {
+        PyMem_Free(locale_);
+        return NULL;
+    }
+    srcLen = (int)srcLenAsSsize;
+    if (srcLen != srcLenAsSsize) {
+        srcLen = -1;
+    }
+
+    int dest_size = LCMapStringEx(locale_, flags, src_, srcLen, NULL, 0,
                                   NULL, NULL, 0);
     if (dest_size == 0) {
+        PyMem_Free(locale_);
+        PyMem_Free(src_);
         return PyErr_SetFromWindowsErr(0);
     }
 
     wchar_t* dest = PyMem_NEW(wchar_t, dest_size);
     if (dest == NULL) {
+        PyMem_Free(locale_);
+        PyMem_Free(src_);
         return PyErr_NoMemory();
     }
 
-    int nmapped = LCMapStringEx(locale, flags, src, -1, dest, dest_size,
+    int nmapped = LCMapStringEx(locale_, flags, src_, srcLen, dest, dest_size,
                                 NULL, NULL, 0);
     if (nmapped == 0) {
         DWORD error = GetLastError();
+        PyMem_Free(locale_);
+        PyMem_Free(src_);
         PyMem_DEL(dest);
         return PyErr_SetFromWindowsErr(error);
     }
 
-    PyObject *ret = PyUnicode_FromWideChar(dest, dest_size - 1);
+    PyObject *ret = PyUnicode_FromWideChar(dest, dest_size);
+    PyMem_Free(locale_);
+    PyMem_Free(src_);
     PyMem_DEL(dest);
 
     return ret;
@@ -1570,13 +1609,13 @@ _winapi.ReadFile
 
     handle: HANDLE
     size: DWORD
-    overlapped as use_overlapped: bool = False
+    overlapped as use_overlapped: bool(accept={int}) = False
 [clinic start generated code]*/
 
 static PyObject *
 _winapi_ReadFile_impl(PyObject *module, HANDLE handle, DWORD size,
                       int use_overlapped)
-/*[clinic end generated code: output=d3d5b44a8201b944 input=4f82f8e909ad91ad]*/
+/*[clinic end generated code: output=d3d5b44a8201b944 input=08c439d03a11aac5]*/
 {
     DWORD nread;
     PyObject *buf;
@@ -1856,13 +1895,13 @@ _winapi.WriteFile
 
     handle: HANDLE
     buffer: object
-    overlapped as use_overlapped: bool = False
+    overlapped as use_overlapped: bool(accept={int}) = False
 [clinic start generated code]*/
 
 static PyObject *
 _winapi_WriteFile_impl(PyObject *module, HANDLE handle, PyObject *buffer,
                        int use_overlapped)
-/*[clinic end generated code: output=2ca80f6bf3fa92e3 input=2badb008c8a2e2a0]*/
+/*[clinic end generated code: output=2ca80f6bf3fa92e3 input=11eae2a03aa32731]*/
 {
     Py_buffer _buf, *buf;
     DWORD len, written;

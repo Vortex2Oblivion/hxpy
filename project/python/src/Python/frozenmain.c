@@ -53,7 +53,7 @@ Py_FrozenMain(int argc, char **argv)
     PyWinFreeze_ExeInit();
 #endif
 
-    if (_Py_GetConfig()->verbose) {
+    if (Py_VerboseFlag) {
         fprintf(stderr, "Python %s\n%s\n",
                 Py_GetVersion(), Py_GetCopyright());
     }

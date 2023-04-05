@@ -377,7 +377,7 @@ class Server(events.AbstractServer):
             self._serving_forever_fut = None
 
     async def wait_closed(self):
-        if self._waiters is None or self._active_count == 0:
+        if self._sockets is None or self._waiters is None:
             return
         waiter = self._loop.create_future()
         self._waiters.append(waiter)
@@ -561,13 +561,8 @@ class BaseEventLoop(events.AbstractEventLoop):
                     'asyncgen': agen
                 })
 
-    async def shutdown_default_executor(self, timeout=None):
-        """Schedule the shutdown of the default executor.
-
-        The timeout parameter specifies the amount of time the executor will
-        be given to finish joining. The default value is None, which means
-        that the executor will be given an unlimited amount of time.
-        """
+    async def shutdown_default_executor(self):
+        """Schedule the shutdown of the default executor."""
         self._executor_shutdown_called = True
         if self._default_executor is None:
             return
@@ -577,13 +572,7 @@ class BaseEventLoop(events.AbstractEventLoop):
         try:
             await future
         finally:
-            thread.join(timeout)
-
-        if thread.is_alive():
-            warnings.warn("The executor did not finishing joining "
-                             f"its threads within {timeout} seconds.",
-                             RuntimeWarning, stacklevel=2)
-            self._default_executor.shutdown(wait=False)
+            thread.join()
 
     def _do_shutdown(self, future):
         try:
@@ -1002,8 +991,7 @@ class BaseEventLoop(events.AbstractEventLoop):
             local_addr=None, server_hostname=None,
             ssl_handshake_timeout=None,
             ssl_shutdown_timeout=None,
-            happy_eyeballs_delay=None, interleave=None,
-            all_errors=False):
+            happy_eyeballs_delay=None, interleave=None):
         """Connect to a TCP server.
 
         Create a streaming transport connection to a given internet host and
@@ -1093,8 +1081,6 @@ class BaseEventLoop(events.AbstractEventLoop):
             if sock is None:
                 exceptions = [exc for sub in exceptions for exc in sub]
                 try:
-                    if all_errors:
-                        raise ExceptionGroup("create_connection failed", exceptions)
                     if len(exceptions) == 1:
                         raise exceptions[0]
                     else:
@@ -1819,22 +1805,7 @@ class BaseEventLoop(events.AbstractEventLoop):
                              exc_info=True)
         else:
             try:
-                ctx = None
-                thing = context.get("task")
-                if thing is None:
-                    # Even though Futures don't have a context,
-                    # Task is a subclass of Future,
-                    # and sometimes the 'future' key holds a Task.
-                    thing = context.get("future")
-                if thing is None:
-                    # Handles also have a context.
-                    thing = context.get("handle")
-                if thing is not None and hasattr(thing, "get_context"):
-                    ctx = thing.get_context()
-                if ctx is not None and hasattr(ctx, "run"):
-                    ctx.run(self._exception_handler, self, context)
-                else:
-                    self._exception_handler(self, context)
+                self._exception_handler(self, context)
             except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as exc:

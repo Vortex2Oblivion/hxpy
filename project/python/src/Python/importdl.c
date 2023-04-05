@@ -3,7 +3,6 @@
 
 #include "Python.h"
 #include "pycore_call.h"
-#include "pycore_import.h"
 #include "pycore_pystate.h"
 #include "pycore_runtime.h"
 
@@ -100,7 +99,7 @@ _PyImport_LoadDynamicModuleWithSpec(PyObject *spec, FILE *fp)
 #endif
     PyObject *name_unicode = NULL, *name = NULL, *path = NULL, *m = NULL;
     const char *name_buf, *hook_prefix;
-    const char *oldcontext, *newcontext;
+    const char *oldcontext;
     dl_funcptr exportfunc;
     PyModuleDef *def;
     PyModInitFunction p0;
@@ -112,10 +111,6 @@ _PyImport_LoadDynamicModuleWithSpec(PyObject *spec, FILE *fp)
     if (!PyUnicode_Check(name_unicode)) {
         PyErr_SetString(PyExc_TypeError,
                         "spec.name must be a string");
-        goto error;
-    }
-    newcontext = PyUnicode_AsUTF8(name_unicode);
-    if (newcontext == NULL) {
         goto error;
     }
 
@@ -165,9 +160,14 @@ _PyImport_LoadDynamicModuleWithSpec(PyObject *spec, FILE *fp)
     p0 = (PyModInitFunction)exportfunc;
 
     /* Package context is needed for single-phase init */
-    oldcontext = _PyImport_SwapPackageContext(newcontext);
+    oldcontext = _Py_PackageContext;
+    _Py_PackageContext = PyUnicode_AsUTF8(name_unicode);
+    if (_Py_PackageContext == NULL) {
+        _Py_PackageContext = oldcontext;
+        goto error;
+    }
     m = _PyImport_InitFunc_TrampolineCall(p0);
-    _PyImport_SwapPackageContext(oldcontext);
+    _Py_PackageContext = oldcontext;
 
     if (m == NULL) {
         if (!PyErr_Occurred()) {
@@ -178,7 +178,8 @@ _PyImport_LoadDynamicModuleWithSpec(PyObject *spec, FILE *fp)
         }
         goto error;
     } else if (PyErr_Occurred()) {
-        _PyErr_FormatFromCause(
+        PyErr_Clear();
+        PyErr_Format(
             PyExc_SystemError,
             "initialization of %s raised unreported exception",
             name_buf);
@@ -203,10 +204,6 @@ _PyImport_LoadDynamicModuleWithSpec(PyObject *spec, FILE *fp)
     }
 
     /* Fall back to single-phase init mechanism */
-
-    if (_PyImport_CheckSubinterpIncompatibleExtensionAllowed(name_buf) < 0) {
-        goto error;
-    }
 
     if (hook_prefix == nonascii_prefix) {
         /* don't allow legacy init for non-ASCII module names */

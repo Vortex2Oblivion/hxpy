@@ -114,10 +114,12 @@ merge(PyObject **items1, Py_ssize_t size1,
             }
             for (; pos < size1; pos++) {
                 PyObject *a = items1[pos];
-                PyTuple_SET_ITEM(tuple, pos, Py_NewRef(a));
+                Py_INCREF(a);
+                PyTuple_SET_ITEM(tuple, pos, a);
             }
         }
-        PyTuple_SET_ITEM(tuple, pos, Py_NewRef(arg));
+        Py_INCREF(arg);
+        PyTuple_SET_ITEM(tuple, pos, arg);
         pos++;
     }
 
@@ -168,7 +170,8 @@ _Py_union_type_or(PyObject* self, PyObject* other)
         if (PyErr_Occurred()) {
             return NULL;
         }
-        return Py_NewRef(self);
+        Py_INCREF(self);
+        return self;
     }
 
     PyObject *new_union = make_union(tuple);
@@ -295,7 +298,8 @@ union_getitem(PyObject *self, PyObject *item)
         res = make_union(newargs);
     }
     else {
-        res = Py_NewRef(PyTuple_GET_ITEM(newargs, 0));
+        res = PyTuple_GET_ITEM(newargs, 0);
+        Py_INCREF(res);
         for (Py_ssize_t iarg = 1; iarg < nargs; iarg++) {
             PyObject *arg = PyTuple_GET_ITEM(newargs, iarg);
             Py_SETREF(res, PyNumber_Or(res, arg));
@@ -322,7 +326,8 @@ union_parameters(PyObject *self, void *Py_UNUSED(unused))
             return NULL;
         }
     }
-    return Py_NewRef(alias->parameters);
+    Py_INCREF(alias->parameters);
+    return alias->parameters;
 }
 
 static PyGetSetDef union_properties[] = {
@@ -395,8 +400,9 @@ make_union(PyObject *args)
         return NULL;
     }
 
+    Py_INCREF(args);
     result->parameters = NULL;
-    result->args = Py_NewRef(args);
+    result->args = args;
     _PyObject_GC_TRACK(result);
     return (PyObject*)result;
 }

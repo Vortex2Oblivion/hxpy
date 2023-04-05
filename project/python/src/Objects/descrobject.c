@@ -6,7 +6,6 @@
 #include "pycore_pystate.h"       // _PyThreadState_GET()
 #include "pycore_tuple.h"         // _PyTuple_ITEMS()
 #include "structmember.h"         // PyMemberDef
-#include "pycore_descrobject.h"
 
 /*[clinic input]
 class mappingproxy "mappingproxyobject *" "&PyDictProxy_Type"
@@ -622,7 +621,8 @@ descr_get_qualname(PyDescrObject *descr, void *Py_UNUSED(ignored))
 {
     if (descr->d_qualname == NULL)
         descr->d_qualname = calculate_qualname(descr);
-    return Py_XNewRef(descr->d_qualname);
+    Py_XINCREF(descr->d_qualname);
+    return descr->d_qualname;
 }
 
 static PyObject *
@@ -903,10 +903,12 @@ descr_new(PyTypeObject *descrtype, PyTypeObject *type, const char *name)
 
     descr = (PyDescrObject *)PyType_GenericAlloc(descrtype, 0);
     if (descr != NULL) {
-        descr->d_type = (PyTypeObject*)Py_XNewRef(type);
+        Py_XINCREF(type);
+        descr->d_type = type;
         descr->d_name = PyUnicode_InternFromString(name);
         if (descr->d_name == NULL) {
-            Py_SETREF(descr, NULL);
+            Py_DECREF(descr);
+            descr = NULL;
         }
         else {
             descr->d_qualname = NULL;
@@ -1175,12 +1177,6 @@ mappingproxy_getiter(mappingproxyobject *pp)
     return PyObject_GetIter(pp->mapping);
 }
 
-static Py_hash_t
-mappingproxy_hash(mappingproxyobject *pp)
-{
-    return PyObject_Hash(pp->mapping);
-}
-
 static PyObject *
 mappingproxy_str(mappingproxyobject *pp)
 {
@@ -1241,7 +1237,8 @@ mappingproxy_new_impl(PyTypeObject *type, PyObject *mapping)
     mappingproxy = PyObject_GC_New(mappingproxyobject, &PyDictProxy_Type);
     if (mappingproxy == NULL)
         return NULL;
-    mappingproxy->mapping = Py_NewRef(mapping);
+    Py_INCREF(mapping);
+    mappingproxy->mapping = mapping;
     _PyObject_GC_TRACK(mappingproxy);
     return (PyObject *)mappingproxy;
 }
@@ -1256,7 +1253,8 @@ PyDictProxy_New(PyObject *mapping)
 
     pp = PyObject_GC_New(mappingproxyobject, &PyDictProxy_Type);
     if (pp != NULL) {
-        pp->mapping = Py_NewRef(mapping);
+        Py_INCREF(mapping);
+        pp->mapping = mapping;
         _PyObject_GC_TRACK(pp);
     }
     return (PyObject *)pp;
@@ -1356,7 +1354,8 @@ wrapper_objclass(wrapperobject *wp, void *Py_UNUSED(ignored))
 {
     PyObject *c = (PyObject *)PyDescr_TYPE(wp->descr);
 
-    return Py_NewRef(c);
+    Py_INCREF(c);
+    return c;
 }
 
 static PyObject *
@@ -1460,8 +1459,10 @@ PyWrapper_New(PyObject *d, PyObject *self)
 
     wp = PyObject_GC_New(wrapperobject, &_PyMethodWrapper_Type);
     if (wp != NULL) {
-        wp->descr = (PyWrapperDescrObject*)Py_NewRef(descr);
-        wp->self = Py_NewRef(self);
+        Py_INCREF(descr);
+        wp->descr = descr;
+        Py_INCREF(self);
+        wp->self = self;
         _PyObject_GC_TRACK(wp);
     }
     return (PyObject *)wp;
@@ -1499,6 +1500,16 @@ class property(object):
         return self.__del(inst)
 
 */
+
+typedef struct {
+    PyObject_HEAD
+    PyObject *prop_get;
+    PyObject *prop_set;
+    PyObject *prop_del;
+    PyObject *prop_doc;
+    PyObject *prop_name;
+    int getter_doc;
+} propertyobject;
 
 static PyObject * property_copy(PyObject *, PyObject *, PyObject *,
                                   PyObject *);
@@ -1558,7 +1569,8 @@ property_set_name(PyObject *self, PyObject *args) {
     propertyobject *prop = (propertyobject *)self;
     PyObject *name = PyTuple_GET_ITEM(args, 1);
 
-    Py_XSETREF(prop->prop_name, Py_XNewRef(name));
+    Py_XINCREF(name);
+    Py_XSETREF(prop->prop_name, name);
 
     Py_RETURN_NONE;
 }
@@ -1590,7 +1602,8 @@ static PyObject *
 property_descr_get(PyObject *self, PyObject *obj, PyObject *type)
 {
     if (obj == NULL || obj == Py_None) {
-        return Py_NewRef(self);
+        Py_INCREF(self);
+        return self;
     }
 
     propertyobject *gs = (propertyobject *)self;
@@ -1664,7 +1677,6 @@ property_descr_set(PyObject *self, PyObject *obj, PyObject *value)
         res = PyObject_CallOneArg(func, obj);
     }
     else {
-        EVAL_CALL_STAT_INC_IF_FUNCTION(EVAL_CALL_API, func);
         PyObject *args[] = { obj, value };
         res = PyObject_Vectorcall(func, args, 2, NULL);
     }
@@ -1711,9 +1723,9 @@ property_copy(PyObject *old, PyObject *get, PyObject *set, PyObject *del)
     Py_DECREF(type);
     if (new == NULL)
         return NULL;
-
     if (PyObject_TypeCheck((new), &PyProperty_Type)) {
-        Py_XSETREF(((propertyobject *) new)->prop_name, Py_XNewRef(pold->prop_name));
+        Py_XINCREF(pold->prop_name);
+        Py_XSETREF(((propertyobject *) new)->prop_name, pold->prop_name);
     }
     return new;
 }
@@ -1767,52 +1779,41 @@ property_init_impl(propertyobject *self, PyObject *fget, PyObject *fset,
     if (fdel == Py_None)
         fdel = NULL;
 
-    Py_XSETREF(self->prop_get, Py_XNewRef(fget));
-    Py_XSETREF(self->prop_set, Py_XNewRef(fset));
-    Py_XSETREF(self->prop_del, Py_XNewRef(fdel));
-    Py_XSETREF(self->prop_doc, NULL);
+    Py_XINCREF(fget);
+    Py_XINCREF(fset);
+    Py_XINCREF(fdel);
+    Py_XINCREF(doc);
+
+    Py_XSETREF(self->prop_get, fget);
+    Py_XSETREF(self->prop_set, fset);
+    Py_XSETREF(self->prop_del, fdel);
+    Py_XSETREF(self->prop_doc, doc);
     Py_XSETREF(self->prop_name, NULL);
 
     self->getter_doc = 0;
-    PyObject *prop_doc = NULL;
 
-    if (doc != NULL && doc != Py_None) {
-        prop_doc = Py_XNewRef(doc);
-    }
     /* if no docstring given and the getter has one, use that one */
-    else if (fget != NULL) {
-        int rc = _PyObject_LookupAttr(fget, &_Py_ID(__doc__), &prop_doc);
+    if ((doc == NULL || doc == Py_None) && fget != NULL) {
+        PyObject *get_doc;
+        int rc = _PyObject_LookupAttr(fget, &_Py_ID(__doc__), &get_doc);
         if (rc <= 0) {
             return rc;
         }
-        if (prop_doc == Py_None) {
-            prop_doc = NULL;
-            Py_DECREF(Py_None);
+        if (Py_IS_TYPE(self, &PyProperty_Type)) {
+            Py_XSETREF(self->prop_doc, get_doc);
         }
-        if (prop_doc != NULL){
-            self->getter_doc = 1;
+        else {
+            /* If this is a property subclass, put __doc__
+               in dict of the subclass instance instead,
+               otherwise it gets shadowed by __doc__ in the
+               class's dict. */
+            int err = PyObject_SetAttr(
+                    (PyObject *)self, &_Py_ID(__doc__), get_doc);
+            Py_DECREF(get_doc);
+            if (err < 0)
+                return -1;
         }
-    }
-
-    /* At this point `prop_doc` is either NULL or
-       a non-None object with incremented ref counter */
-
-    if (Py_IS_TYPE(self, &PyProperty_Type)) {
-        Py_XSETREF(self->prop_doc, prop_doc);
-    } else {
-        /* If this is a property subclass, put __doc__
-           in dict of the subclass instance instead,
-           otherwise it gets shadowed by __doc__ in the
-           class's dict. */
-
-        if (prop_doc == NULL) {
-            prop_doc = Py_NewRef(Py_None);
-        }
-        int err = PyObject_SetAttr(
-                    (PyObject *)self, &_Py_ID(__doc__), prop_doc);
-        Py_XDECREF(prop_doc);
-        if (err < 0)
-            return -1;
+        self->getter_doc = 1;
     }
 
     return 0;
@@ -1892,7 +1893,7 @@ PyTypeObject PyDictProxy_Type = {
     &mappingproxy_as_number,                    /* tp_as_number */
     &mappingproxy_as_sequence,                  /* tp_as_sequence */
     &mappingproxy_as_mapping,                   /* tp_as_mapping */
-    (hashfunc)mappingproxy_hash,                /* tp_hash */
+    0,                                          /* tp_hash */
     0,                                          /* tp_call */
     (reprfunc)mappingproxy_str,                 /* tp_str */
     PyObject_GenericGetAttr,                    /* tp_getattro */

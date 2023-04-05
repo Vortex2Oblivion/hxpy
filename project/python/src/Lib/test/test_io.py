@@ -68,7 +68,7 @@ else:
 
 # Does io.IOBase finalizer log the exception if the close() method fails?
 # The exception is ignored silently by default in release build.
-IOBASE_EMITS_UNRAISABLE = (support.Py_DEBUG or sys.flags.dev_mode)
+IOBASE_EMITS_UNRAISABLE = (hasattr(sys, "gettotalrefcount") or sys.flags.dev_mode)
 
 
 def _default_chunk_size():
@@ -1042,95 +1042,6 @@ class CIOTest(IOTest):
         support.gc_collect()
         self.assertIsNone(wr(), wr)
 
-@support.cpython_only
-class TestIOCTypes(unittest.TestCase):
-    def setUp(self):
-        _io = import_helper.import_module("_io")
-        self.types = [
-            _io.BufferedRWPair,
-            _io.BufferedRandom,
-            _io.BufferedReader,
-            _io.BufferedWriter,
-            _io.BytesIO,
-            _io.FileIO,
-            _io.IncrementalNewlineDecoder,
-            _io.StringIO,
-            _io.TextIOWrapper,
-            _io._BufferedIOBase,
-            _io._BytesIOBuffer,
-            _io._IOBase,
-            _io._RawIOBase,
-            _io._TextIOBase,
-        ]
-        if sys.platform == "win32":
-            self.types.append(_io._WindowsConsoleIO)
-        self._io = _io
-
-    def test_immutable_types(self):
-        for tp in self.types:
-            with self.subTest(tp=tp):
-                with self.assertRaisesRegex(TypeError, "immutable"):
-                    tp.foo = "bar"
-
-    def test_class_hierarchy(self):
-        def check_subs(types, base):
-            for tp in types:
-                with self.subTest(tp=tp, base=base):
-                    self.assertTrue(issubclass(tp, base))
-
-        def recursive_check(d):
-            for k, v in d.items():
-                if isinstance(v, dict):
-                    recursive_check(v)
-                elif isinstance(v, set):
-                    check_subs(v, k)
-                else:
-                    self.fail("corrupt test dataset")
-
-        _io = self._io
-        hierarchy = {
-            _io._IOBase: {
-                _io._BufferedIOBase: {
-                    _io.BufferedRWPair,
-                    _io.BufferedRandom,
-                    _io.BufferedReader,
-                    _io.BufferedWriter,
-                    _io.BytesIO,
-                },
-                _io._RawIOBase: {
-                    _io.FileIO,
-                },
-                _io._TextIOBase: {
-                    _io.StringIO,
-                    _io.TextIOWrapper,
-                },
-            },
-        }
-        if sys.platform == "win32":
-            hierarchy[_io._IOBase][_io._RawIOBase].add(_io._WindowsConsoleIO)
-
-        recursive_check(hierarchy)
-
-    def test_subclassing(self):
-        _io = self._io
-        dataset = {k: True for k in self.types}
-        dataset[_io._BytesIOBuffer] = False
-
-        for tp, is_basetype in dataset.items():
-            with self.subTest(tp=tp, is_basetype=is_basetype):
-                name = f"{tp.__name__}_subclass"
-                bases = (tp,)
-                if is_basetype:
-                    _ = type(name, bases, {})
-                else:
-                    msg = "not an acceptable base type"
-                    with self.assertRaisesRegex(TypeError, msg):
-                        _ = type(name, bases, {})
-
-    def test_disallow_instantiation(self):
-        _io = self._io
-        support.check_disallow_instantiation(self, _io._BytesIOBuffer)
-
 class PyIOTest(IOTest):
     pass
 
@@ -1628,25 +1539,11 @@ class BufferedReaderTest(unittest.TestCase, CommonBufferedTests):
 
     def test_read_on_closed(self):
         # Issue #23796
-        b = self.BufferedReader(self.BytesIO(b"12"))
+        b = io.BufferedReader(io.BytesIO(b"12"))
         b.read(1)
         b.close()
-        with self.subTest('peek'):
-            self.assertRaises(ValueError, b.peek)
-        with self.subTest('read1'):
-            self.assertRaises(ValueError, b.read1, 1)
-        with self.subTest('read'):
-            self.assertRaises(ValueError, b.read)
-        with self.subTest('readinto'):
-            self.assertRaises(ValueError, b.readinto, bytearray())
-        with self.subTest('readinto1'):
-            self.assertRaises(ValueError, b.readinto1, bytearray())
-        with self.subTest('flush'):
-            self.assertRaises(ValueError, b.flush)
-        with self.subTest('truncate'):
-            self.assertRaises(ValueError, b.truncate)
-        with self.subTest('seek'):
-            self.assertRaises(ValueError, b.seek, 0)
+        self.assertRaises(ValueError, b.peek)
+        self.assertRaises(ValueError, b.read1, 1)
 
     def test_truncate_on_read_only(self):
         rawio = self.MockFileIO(b"abc")
@@ -1704,10 +1601,10 @@ class CBufferedReaderTest(BufferedReaderTest, SizeofTest):
     def test_args_error(self):
         # Issue #17275
         with self.assertRaisesRegex(TypeError, "BufferedReader"):
-            self.tp(self.BytesIO(), 1024, 1024, 1024)
+            self.tp(io.BytesIO(), 1024, 1024, 1024)
 
     def test_bad_readinto_value(self):
-        rawio = self.tp(self.BytesIO(b"12"))
+        rawio = io.BufferedReader(io.BytesIO(b"12"))
         rawio.readinto = lambda buf: -1
         bufio = self.tp(rawio)
         with self.assertRaises(OSError) as cm:
@@ -1715,7 +1612,7 @@ class CBufferedReaderTest(BufferedReaderTest, SizeofTest):
         self.assertIsNone(cm.exception.__cause__)
 
     def test_bad_readinto_type(self):
-        rawio = self.tp(self.BytesIO(b"12"))
+        rawio = io.BufferedReader(io.BytesIO(b"12"))
         rawio.readinto = lambda buf: b''
         bufio = self.tp(rawio)
         with self.assertRaises(OSError) as cm:
@@ -1858,7 +1755,7 @@ class BufferedWriterTest(unittest.TestCase, CommonBufferedTests):
         self.assertTrue(s.startswith(b"01234567A"), s)
 
     def test_write_and_rewind(self):
-        raw = self.BytesIO()
+        raw = io.BytesIO()
         bufio = self.tp(raw, 4)
         self.assertEqual(bufio.write(b"abcdef"), 6)
         self.assertEqual(bufio.tell(), 6)
@@ -2068,7 +1965,7 @@ class CBufferedWriterTest(BufferedWriterTest, SizeofTest):
     def test_args_error(self):
         # Issue #17275
         with self.assertRaisesRegex(TypeError, "BufferedWriter"):
-            self.tp(self.BytesIO(), 1024, 1024, 1024)
+            self.tp(io.BytesIO(), 1024, 1024, 1024)
 
 
 class PyBufferedWriterTest(BufferedWriterTest):
@@ -2544,7 +2441,7 @@ class CBufferedRandomTest(BufferedRandomTest, SizeofTest):
     def test_args_error(self):
         # Issue #17275
         with self.assertRaisesRegex(TypeError, "BufferedRandom"):
-            self.tp(self.BytesIO(), 1024, 1024, 1024)
+            self.tp(io.BytesIO(), 1024, 1024, 1024)
 
 
 class PyBufferedRandomTest(BufferedRandomTest):
@@ -3576,7 +3473,7 @@ class TextIOWrapperTest(unittest.TestCase):
         # encode() is invalid shouldn't cause an assertion failure.
         rot13 = codecs.lookup("rot13")
         with support.swap_attr(rot13, '_is_text_encoding', True):
-            t = self.TextIOWrapper(self.BytesIO(b'foo'), encoding="rot13")
+            t = io.TextIOWrapper(io.BytesIO(b'foo'), encoding="rot13")
         self.assertRaises(TypeError, t.write, 'bar')
 
     def test_illegal_decoder(self):
@@ -3682,7 +3579,7 @@ class TextIOWrapperTest(unittest.TestCase):
         t = self.TextIOWrapper(F(), encoding='utf-8')
 
     def test_reconfigure_locale(self):
-        wrapper = self.TextIOWrapper(self.BytesIO(b"test"))
+        wrapper = io.TextIOWrapper(io.BytesIO(b"test"))
         wrapper.reconfigure(encoding="locale")
 
     def test_reconfigure_encoding_read(self):
@@ -3852,7 +3749,7 @@ class CTextIOWrapperTest(TextIOWrapperTest):
         # all data to disk.
         # The Python version has __del__, so it ends in gc.garbage instead.
         with warnings_helper.check_warnings(('', ResourceWarning)):
-            rawio = self.FileIO(os_helper.TESTFN, "wb")
+            rawio = io.FileIO(os_helper.TESTFN, "wb")
             b = self.BufferedWriter(rawio)
             t = self.TextIOWrapper(b, encoding="ascii")
             t.write("456def")
@@ -4420,6 +4317,14 @@ class MiscIOTest(unittest.TestCase):
         proc = assert_python_ok('-X', 'utf8=1', '-c', code)
         self.assertEqual(b"utf-8", proc.out.strip())
 
+    @support.cpython_only
+    # Depending if OpenWrapper was already created or not, the warning is
+    # emitted or not. For example, the attribute is already created when this
+    # test is run multiple times.
+    @warnings_helper.ignore_warnings(category=DeprecationWarning)
+    def test_openwrapper(self):
+        self.assertIs(self.io.OpenWrapper, self.io.open)
+
 
 class CMiscIOTest(MiscIOTest):
     io = io
@@ -4760,7 +4665,7 @@ def load_tests(loader, tests, pattern):
              CIncrementalNewlineDecoderTest, PyIncrementalNewlineDecoderTest,
              CTextIOWrapperTest, PyTextIOWrapperTest,
              CMiscIOTest, PyMiscIOTest,
-             CSignalsTest, PySignalsTest, TestIOCTypes,
+             CSignalsTest, PySignalsTest,
              )
 
     # Put the namespaces of the IO module we are testing and some useful mock

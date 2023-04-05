@@ -12,9 +12,7 @@
  */
 
 #ifdef MS_WINDOWS
-#  ifndef WIN32_LEAN_AND_MEAN
-#    define WIN32_LEAN_AND_MEAN
-#  endif
+#  define WIN32_LEAN_AND_MEAN
 #  include <windows.h>
 #  include <winsock2.h>
 #  include <process.h>               /* getpid() */
@@ -91,7 +89,7 @@ PyObject *_PyMp_SetError(PyObject *Type, int num);
  * Externs - not all will really exist on all platforms
  */
 
-extern PyType_Spec _PyMp_SemLockType_spec;
+extern PyTypeObject _PyMp_SemLockType;
 extern PyObject *_PyMp_sem_unlink(const char *name);
 
 #endif /* MULTIPROCESSING_H */

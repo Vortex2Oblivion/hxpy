@@ -23,7 +23,8 @@ static PyObject *
 _typing__idfunc(PyObject *module, PyObject *x)
 /*[clinic end generated code: output=63c38be4a6ec5f2c input=49f17284b43de451]*/
 {
-    return Py_NewRef(x);
+    Py_INCREF(x);
+    return x;
 }
 
 

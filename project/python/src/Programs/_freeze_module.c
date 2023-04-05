@@ -2,13 +2,12 @@
    modules into frozen modules (like Lib/importlib/_bootstrap.py
    into Python/importlib.h).
 
-   This is used directly by Tools/build/freeze_modules.py, and indirectly by "make regen-frozen".
+   This is used directly by Tools/scripts/freeze_modules.py, and indirectly by "make regen-frozen".
 
    See Python/frozen.c for more info.
 
    Keep this file in sync with Programs/_freeze_module.py.
 */
-
 
 #include <Python.h>
 #include <marshal.h>
@@ -22,8 +21,6 @@
 #ifndef MS_WINDOWS
 #include <unistd.h>
 #endif
-
-uint32_t _Py_next_func_version = 1;
 
 /* Empty initializer for deepfrozen modules */
 int _Py_Deepfreeze_Init(void)

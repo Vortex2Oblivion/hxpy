@@ -1,7 +1,7 @@
 # The most useful windows datatypes
 import ctypes
 
-BYTE = ctypes.c_ubyte
+BYTE = ctypes.c_byte
 WORD = ctypes.c_ushort
 DWORD = ctypes.c_ulong
 

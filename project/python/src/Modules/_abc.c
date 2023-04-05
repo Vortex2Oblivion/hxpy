@@ -79,7 +79,7 @@ abc_data_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
         return NULL;
     }
 
-    state = _PyType_GetModuleState(type);
+    state = PyType_GetModuleState(type);
     if (state == NULL) {
         Py_DECREF(self);
         return NULL;
@@ -524,7 +524,8 @@ _abc__abc_register_impl(PyObject *module, PyObject *self, PyObject *subclass)
     }
     int result = PyObject_IsSubclass(subclass, self);
     if (result > 0) {
-        return Py_NewRef(subclass);  /* Already a subclass. */
+        Py_INCREF(subclass);
+        return subclass;  /* Already a subclass. */
     }
     if (result < 0) {
         return NULL;
@@ -560,7 +561,8 @@ _abc__abc_register_impl(PyObject *module, PyObject *self, PyObject *subclass)
             set_collection_flag_recursive((PyTypeObject *)subclass, collection_flag);
         }
     }
-    return Py_NewRef(subclass);
+    Py_INCREF(subclass);
+    return subclass;
 }
 
 
@@ -596,7 +598,8 @@ _abc__abc_instancecheck_impl(PyObject *module, PyObject *self,
         goto end;
     }
     if (incache > 0) {
-        result = Py_NewRef(Py_True);
+        result = Py_True;
+        Py_INCREF(result);
         goto end;
     }
     subtype = (PyObject *)Py_TYPE(instance);
@@ -607,7 +610,8 @@ _abc__abc_instancecheck_impl(PyObject *module, PyObject *self,
                 goto end;
             }
             if (incache > 0) {
-                result = Py_NewRef(Py_False);
+                result = Py_False;
+                Py_INCREF(result);
                 goto end;
             }
         }
@@ -624,7 +628,8 @@ _abc__abc_instancecheck_impl(PyObject *module, PyObject *self,
 
     switch (PyObject_IsTrue(result)) {
     case -1:
-        Py_SETREF(result, NULL);
+        Py_DECREF(result);
+        result = NULL;
         break;
     case 0:
         Py_DECREF(result);
@@ -797,7 +802,8 @@ _abc__abc_subclasscheck_impl(PyObject *module, PyObject *self,
 end:
     Py_DECREF(impl);
     Py_XDECREF(subclasses);
-    return Py_XNewRef(result);
+    Py_XINCREF(result);
+    return result;
 }
 
 
@@ -836,7 +842,8 @@ subclasscheck_check_registry(_abc_data *impl, PyObject *subclass,
     Py_ssize_t i = 0;
 
     while (_PySet_NextEntry(impl->_abc_registry, &pos, &key, &hash)) {
-        copy[i++] = Py_NewRef(key);
+        Py_INCREF(key);
+        copy[i++] = key;
     }
     assert(i == registry_size);
 

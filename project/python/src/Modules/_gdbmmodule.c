@@ -162,35 +162,6 @@ gdbm_length(gdbmobject *dp)
     return dp->di_size;
 }
 
-static int
-gdbm_bool(gdbmobject *dp)
-{
-    _gdbm_state *state = PyType_GetModuleState(Py_TYPE(dp));
-    if (dp->di_dbm == NULL) {
-        PyErr_SetString(state->gdbm_error, "GDBM object has already been closed");
-        return -1;
-    }
-    if (dp->di_size > 0) {
-        /* Known non-zero size. */
-        return 1;
-    }
-    if (dp->di_size == 0) {
-        /* Known zero size. */
-        return 0;
-    }
-    /* Unknown size.  Ensure DBM object has an entry. */
-    datum key = gdbm_firstkey(dp->di_dbm);
-    if (key.dptr == NULL) {
-        /* Empty. Cache this fact. */
-        dp->di_size = 0;
-        return 0;
-    }
-
-    /* Non-empty. Don't cache the length since we don't know. */
-    free(key.dptr);
-    return 1;
-}
-
 // Wrapper function for PyArg_Parse(o, "s#", &d.dptr, &d.size).
 // This function is needed to support PY_SSIZE_T_CLEAN.
 // Return 1 on success, same to PyArg_Parse().
@@ -256,7 +227,8 @@ _gdbm_gdbm_get_impl(gdbmobject *self, PyObject *key, PyObject *default_value)
     res = gdbm_subscript(self, key);
     if (res == NULL && PyErr_ExceptionMatches(PyExc_KeyError)) {
         PyErr_Clear();
-        return Py_NewRef(default_value);
+        Py_INCREF(default_value);
+        return default_value;
     }
     return res;
 }
@@ -565,7 +537,8 @@ _gdbm_gdbm_sync_impl(gdbmobject *self, PyTypeObject *cls)
 static PyObject *
 gdbm__enter__(PyObject *self, PyObject *args)
 {
-    return Py_NewRef(self);
+    Py_INCREF(self);
+    return self;
 }
 
 static PyObject *
@@ -596,7 +569,6 @@ static PyType_Slot gdbmtype_spec_slots[] = {
     {Py_mp_length, gdbm_length},
     {Py_mp_subscript, gdbm_subscript},
     {Py_mp_ass_subscript, gdbm_ass_sub},
-    {Py_nb_bool, gdbm_bool},
     {Py_tp_doc, (char*)gdbm_object__doc__},
     {0, 0}
 };
@@ -675,6 +647,7 @@ dbmopen_impl(PyObject *module, PyObject *filename, const char *flags,
         return NULL;
     }
     for (flags++; *flags != '\0'; flags++) {
+        char buf[40];
         switch (*flags) {
 #ifdef GDBM_FAST
             case 'f':
@@ -692,8 +665,9 @@ dbmopen_impl(PyObject *module, PyObject *filename, const char *flags,
                 break;
 #endif
             default:
-                PyErr_Format(state->gdbm_error,
-                             "Flag '%c' is not supported.", (unsigned char)*flags);
+                PyOS_snprintf(buf, sizeof(buf), "Flag '%c' is not supported.",
+                              *flags);
+                PyErr_SetString(state->gdbm_error, buf);
                 return NULL;
         }
     }

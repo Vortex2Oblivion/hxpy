@@ -762,48 +762,12 @@ class TestDictFields(unittest.TestCase):
         dictrow = {'f0': 0, 'f1': 1, 'f2': 2, 'f3': 3}
         self.assertRaises(ValueError, csv.DictWriter.writerow, writer, dictrow)
 
-        # see bpo-44512 (differently cased 'raise' should not result in 'ignore')
-        writer = csv.DictWriter(fileobj, ['f1', 'f2'], extrasaction="RAISE")
-        self.assertRaises(ValueError, csv.DictWriter.writerow, writer, dictrow)
-
     def test_write_field_not_in_field_names_ignore(self):
         fileobj = StringIO()
         writer = csv.DictWriter(fileobj, ['f1', 'f2'], extrasaction="ignore")
         dictrow = {'f0': 0, 'f1': 1, 'f2': 2, 'f3': 3}
         csv.DictWriter.writerow(writer, dictrow)
         self.assertEqual(fileobj.getvalue(), "1,2\r\n")
-
-        # bpo-44512
-        writer = csv.DictWriter(fileobj, ['f1', 'f2'], extrasaction="IGNORE")
-        csv.DictWriter.writerow(writer, dictrow)
-
-    def test_dict_reader_fieldnames_accepts_iter(self):
-        fieldnames = ["a", "b", "c"]
-        f = StringIO()
-        reader = csv.DictReader(f, iter(fieldnames))
-        self.assertEqual(reader.fieldnames, fieldnames)
-
-    def test_dict_reader_fieldnames_accepts_list(self):
-        fieldnames = ["a", "b", "c"]
-        f = StringIO()
-        reader = csv.DictReader(f, fieldnames)
-        self.assertEqual(reader.fieldnames, fieldnames)
-
-    def test_dict_writer_fieldnames_rejects_iter(self):
-        fieldnames = ["a", "b", "c"]
-        f = StringIO()
-        writer = csv.DictWriter(f, iter(fieldnames))
-        self.assertEqual(writer.fieldnames, fieldnames)
-
-    def test_dict_writer_fieldnames_accepts_list(self):
-        fieldnames = ["a", "b", "c"]
-        f = StringIO()
-        writer = csv.DictWriter(f, fieldnames)
-        self.assertEqual(writer.fieldnames, fieldnames)
-
-    def test_dict_reader_fieldnames_is_optional(self):
-        f = StringIO()
-        reader = csv.DictReader(f, fieldnames=None)
 
     def test_read_dict_fields(self):
         with TemporaryFile("w+", encoding="utf-8") as fileobj:

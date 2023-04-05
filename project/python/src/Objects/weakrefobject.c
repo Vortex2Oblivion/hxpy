@@ -311,7 +311,8 @@ weakref___new__(PyTypeObject *type, PyObject *args, PyObject *kwargs)
         if (callback == NULL && type == &_PyWeakref_RefType) {
             if (ref != NULL) {
                 /* We can re-use an existing reference. */
-                return Py_NewRef(ref);
+                Py_INCREF(ref);
+                return (PyObject *)ref;
             }
         }
         /* We have to create a new reference. */
@@ -824,7 +825,9 @@ PyWeakref_NewRef(PyObject *ob, PyObject *callback)
                        during GC.  Return that one instead of this one
                        to avoid violating the invariants of the list
                        of weakrefs for ob. */
-                    Py_SETREF(result, (PyWeakReference*)Py_NewRef(ref));
+                    Py_DECREF(result);
+                    Py_INCREF(ref);
+                    result = ref;
                 }
             }
             else {
@@ -887,7 +890,9 @@ PyWeakref_NewProxy(PyObject *ob, PyObject *callback)
                        during GC.  Return that one instead of this one
                        to avoid violating the invariants of the list
                        of weakrefs for ob. */
-                    Py_SETREF(result, (PyWeakReference*)Py_NewRef(proxy));
+                    Py_DECREF(result);
+                    result = proxy;
+                    Py_INCREF(result);
                     goto skip_insert;
                 }
                 prev = ref;
@@ -959,8 +964,9 @@ PyObject_ClearWeakRefs(PyObject *object)
     if (*list != NULL) {
         PyWeakReference *current = *list;
         Py_ssize_t count = _PyWeakref_GetWeakrefCount(current);
-        PyObject *exc = PyErr_GetRaisedException();
+        PyObject *err_type, *err_value, *err_tb;
 
+        PyErr_Fetch(&err_type, &err_value, &err_tb);
         if (count == 1) {
             PyObject *callback = current->wr_callback;
 
@@ -979,7 +985,7 @@ PyObject_ClearWeakRefs(PyObject *object)
 
             tuple = PyTuple_New(count * 2);
             if (tuple == NULL) {
-                _PyErr_ChainExceptions1(exc);
+                _PyErr_ChainExceptions(err_type, err_value, err_tb);
                 return;
             }
 
@@ -987,7 +993,8 @@ PyObject_ClearWeakRefs(PyObject *object)
                 PyWeakReference *next = current->wr_next;
 
                 if (Py_REFCNT((PyObject *)current) > 0) {
-                    PyTuple_SET_ITEM(tuple, i * 2, Py_NewRef(current));
+                    Py_INCREF(current);
+                    PyTuple_SET_ITEM(tuple, i * 2, (PyObject *) current);
                     PyTuple_SET_ITEM(tuple, i * 2 + 1, current->wr_callback);
                 }
                 else {
@@ -1009,25 +1016,6 @@ PyObject_ClearWeakRefs(PyObject *object)
             Py_DECREF(tuple);
         }
         assert(!PyErr_Occurred());
-        PyErr_SetRaisedException(exc);
-    }
-}
-
-/* This function is called by _PyStaticType_Dealloc() to clear weak references.
- *
- * This is called at the end of runtime finalization, so we can just
- * wipe out the type's weaklist.  We don't bother with callbacks
- * or anything else.
- */
-void
-_PyStaticType_ClearWeakRefs(PyTypeObject *type)
-{
-    static_builtin_state *state = _PyStaticType_GetState(type);
-    PyObject **list = _PyStaticType_GET_WEAKREFS_LISTPTR(state);
-    while (*list != NULL) {
-        /* Note that clear_weakref() pops the first ref off the type's
-           weaklist before clearing its wr_object and wr_callback.
-           That is how we're able to loop over the list. */
-        clear_weakref((PyWeakReference *)*list);
+        PyErr_Restore(err_type, err_value, err_tb);
     }
 }

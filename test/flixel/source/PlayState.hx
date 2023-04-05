@@ -9,7 +9,8 @@ class PlayState extends FlxState
 	{
 		super.create();
 		trace("Python Ver: " + Python.VERSION);
-		PythonOpen.open();
+		Python.pythonInitialize();
+		Python.pythonRunSimpleString("Hello from embedded python!");
 	}
 
 	override public function update(elapsed:Float)

@@ -6,6 +6,7 @@ machinery = test_util.import_importlib('importlib.machinery')
 
 import os.path
 import sys
+from test import support
 from test.support import import_helper
 from test.support import os_helper
 import types
@@ -300,8 +301,7 @@ class ReloadTests:
         name = 'spam'
         with os_helper.temp_cwd(None) as cwd:
             with test_util.uncache('spam'):
-                with test_util.import_state(path=[cwd]):
-                    self.init._bootstrap_external._install(self.init._bootstrap)
+                with import_helper.DirsOnSysPath(cwd):
                     # Start as a namespace package.
                     self.init.invalidate_caches()
                     bad_path = os.path.join(cwd, name, '__init.py')

@@ -449,7 +449,8 @@ to_complex(PyObject **pobj, Py_complex *pc)
         pc->real = PyFloat_AsDouble(obj);
         return 0;
     }
-    *pobj = Py_NewRef(Py_NotImplemented);
+    Py_INCREF(Py_NotImplemented);
+    *pobj = Py_NotImplemented;
     return -1;
 }
 
@@ -552,7 +553,8 @@ static PyObject *
 complex_pos(PyComplexObject *v)
 {
     if (PyComplex_CheckExact(v)) {
-        return Py_NewRef(v);
+        Py_INCREF(v);
+        return (PyObject *)v;
     }
     else
         return PyComplex_FromCComplex(v->cval);
@@ -629,7 +631,8 @@ complex_richcompare(PyObject *v, PyObject *w, int op)
     else
          res = Py_False;
 
-    return Py_NewRef(res);
+    Py_INCREF(res);
+    return res;
 
 Unimplemented:
     Py_RETURN_NOTIMPLEMENTED;
@@ -702,7 +705,8 @@ complex___complex___impl(PyComplexObject *self)
 /*[clinic end generated code: output=e6b35ba3d275dc9c input=3589ada9d27db854]*/
 {
     if (PyComplex_CheckExact(self)) {
-        return Py_NewRef(self);
+        Py_INCREF(self);
+        return (PyObject *)self;
     }
     else {
         return PyComplex_FromCComplex(self->cval);
@@ -913,7 +917,8 @@ complex_new_impl(PyTypeObject *type, PyObject *r, PyObject *i)
            to exact complexes here.  If either the input or the
            output is a complex subclass, it will be handled below
            as a non-orthogonal vector.  */
-        return Py_NewRef(r);
+        Py_INCREF(r);
+        return r;
     }
     if (PyUnicode_Check(r)) {
         if (i != NULL) {

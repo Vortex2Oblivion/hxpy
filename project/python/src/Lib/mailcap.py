@@ -90,7 +90,9 @@ def _readmailcapfile(fp, lineno):
     the viewing command is stored with the key "view".
     """
     caps = {}
-    while line := fp.readline():
+    while 1:
+        line = fp.readline()
+        if not line: break
         # Ignore comments and blank lines
         if line[0] == '#' or line.strip() == '':
             continue

@@ -640,7 +640,7 @@ def eff_request_host(request):
 
     """
     erhn = req_host = request_host(request)
-    if "." not in req_host:
+    if req_host.find(".") == -1 and not IPV4_RE.search(req_host):
         erhn = req_host + ".local"
     return req_host, erhn
 
@@ -1918,7 +1918,9 @@ class LWPCookieJar(FileCookieJar):
                        "comment", "commenturl")
 
         try:
-            while (line := f.readline()) != "":
+            while 1:
+                line = f.readline()
+                if line == "": break
                 if not line.startswith(header):
                     continue
                 line = line[len(header):].strip()
@@ -2018,8 +2020,11 @@ class MozillaCookieJar(FileCookieJar):
                 filename)
 
         try:
-            while (line := f.readline()) != "":
+            while 1:
+                line = f.readline()
                 rest = {}
+
+                if line == "": break
 
                 # httponly is a cookie flag as defined in rfc6265
                 # when encoded in a netscape cookie file,

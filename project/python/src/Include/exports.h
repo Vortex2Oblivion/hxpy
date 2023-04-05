@@ -2,15 +2,9 @@
 #define Py_EXPORTS_H
 
 #if defined(_WIN32) || defined(__CYGWIN__)
-    #if defined(Py_ENABLE_SHARED)
-        #define Py_IMPORTED_SYMBOL __declspec(dllimport)
-        #define Py_EXPORTED_SYMBOL __declspec(dllexport)
-        #define Py_LOCAL_SYMBOL
-    #else
-        #define Py_IMPORTED_SYMBOL
-        #define Py_EXPORTED_SYMBOL
-        #define Py_LOCAL_SYMBOL
-    #endif
+    #define Py_IMPORTED_SYMBOL __declspec(dllimport)
+    #define Py_EXPORTED_SYMBOL __declspec(dllexport)
+    #define Py_LOCAL_SYMBOL
 #else
 /*
  * If we only ever used gcc >= 5, we could use __has_attribute(visibility)

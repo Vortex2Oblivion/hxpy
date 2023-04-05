@@ -217,7 +217,10 @@ class MimeTypes:
         list of standard types, else to the list of non-standard
         types.
         """
-        while line := fp.readline():
+        while 1:
+            line = fp.readline()
+            if not line:
+                break
             words = line.split()
             for i in range(len(words)):
                 if words[i][0] == '#':
@@ -424,8 +427,8 @@ def _default_mime_types():
     # Make sure the entry with the preferred file extension for a particular mime type
     # appears before any others of the same mimetype.
     types_map = _types_map_default = {
-        '.js'     : 'text/javascript',
-        '.mjs'    : 'text/javascript',
+        '.js'     : 'application/javascript',
+        '.mjs'    : 'application/javascript',
         '.json'   : 'application/json',
         '.webmanifest': 'application/manifest+json',
         '.doc'    : 'application/msword',

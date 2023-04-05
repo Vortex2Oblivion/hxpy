@@ -292,7 +292,8 @@ class BaseServer:
             selector.register(self, selectors.EVENT_READ)
 
             while True:
-                if selector.select(timeout):
+                ready = selector.select(timeout)
+                if ready:
                     return self._handle_request_noblock()
                 else:
                     if timeout is not None:

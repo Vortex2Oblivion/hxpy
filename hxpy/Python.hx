@@ -1,16 +1,12 @@
 package hxpy;
 
-import haxe.display.Display.Define;
+import haxe.Constraints.Function;
 
 @:buildXml("<include name='${haxelib:hxpy}/project/Build.xml' />")
 @:headerCode("#define PY_SSIZE_T_CLEAN")
 @:include("Python.h")
-@:include("stdio.h")
-@:include("string.h")
-@:include("errno.h")
-@:include("limits.h")
-@:include("assert.h")
-@:include("stdlib.h")
+@:include("python311.lib")
+@:include("python3.lib")
 @:keep
 extern class Python
 {
@@ -31,4 +27,10 @@ extern class Python
 
     @:native('::String(PY_RELEASE_SERIAL)')
 	static var RELEASE_SERIAL:String;
+
+    @:native("Py_Initialize")
+	public static function pythonInitialize():Function;
+
+    @:native("PyRun_SimpleString")
+	public static function pythonRunSimpleString(s:String):Function;
 }

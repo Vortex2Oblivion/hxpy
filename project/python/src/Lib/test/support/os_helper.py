@@ -4,7 +4,6 @@ import errno
 import os
 import re
 import stat
-import string
 import sys
 import time
 import unittest
@@ -12,7 +11,11 @@ import warnings
 
 
 # Filename used for testing
-TESTFN_ASCII = '@test'
+if os.name == 'java':
+    # Jython disallows @ in module names
+    TESTFN_ASCII = '$test'
+else:
+    TESTFN_ASCII = '@test'
 
 # Disambiguate TESTFN for parallel testing, while letting it remain a valid
 # module name.
@@ -138,11 +141,6 @@ for name in (
     try:
         name.decode(sys.getfilesystemencoding())
     except UnicodeDecodeError:
-        try:
-            name.decode(sys.getfilesystemencoding(),
-                        sys.getfilesystemencodeerrors())
-        except UnicodeDecodeError:
-            continue
         TESTFN_UNDECODABLE = os.fsencode(TESTFN_ASCII) + name
         break
 
@@ -569,7 +567,7 @@ def fs_is_case_insensitive(directory):
 
 
 class FakePath:
-    """Simple implementation of the path protocol.
+    """Simple implementing of the path protocol.
     """
     def __init__(self, path):
         self.path = path
@@ -717,37 +715,3 @@ class EnvironmentVarGuard(collections.abc.MutableMapping):
             else:
                 self._environ[k] = v
         os.environ = self._environ
-
-
-try:
-    import ctypes
-    kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
-
-    ERROR_FILE_NOT_FOUND = 2
-    DDD_REMOVE_DEFINITION = 2
-    DDD_EXACT_MATCH_ON_REMOVE = 4
-    DDD_NO_BROADCAST_SYSTEM = 8
-except (ImportError, AttributeError):
-    def subst_drive(path):
-        raise unittest.SkipTest('ctypes or kernel32 is not available')
-else:
-    @contextlib.contextmanager
-    def subst_drive(path):
-        """Temporarily yield a substitute drive for a given path."""
-        for c in reversed(string.ascii_uppercase):
-            drive = f'{c}:'
-            if (not kernel32.QueryDosDeviceW(drive, None, 0) and
-                    ctypes.get_last_error() == ERROR_FILE_NOT_FOUND):
-                break
-        else:
-            raise unittest.SkipTest('no available logical drive')
-        if not kernel32.DefineDosDeviceW(
-                DDD_NO_BROADCAST_SYSTEM, drive, path):
-            raise ctypes.WinError(ctypes.get_last_error())
-        try:
-            yield drive
-        finally:
-            if not kernel32.DefineDosDeviceW(
-                    DDD_REMOVE_DEFINITION | DDD_EXACT_MATCH_ON_REMOVE,
-                    drive, path):
-                raise ctypes.WinError(ctypes.get_last_error())

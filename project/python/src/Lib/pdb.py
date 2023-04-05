@@ -107,6 +107,15 @@ def find_function(funcname, filename):
                 return funcname, filename, lineno
     return None
 
+def getsourcelines(obj):
+    lines, lineno = inspect.findsource(obj)
+    if inspect.isframe(obj) and obj.f_globals is obj.f_locals:
+        # must be a module frame: do not try to cut a block out of it
+        return lines, 1
+    elif inspect.ismodule(obj):
+        return lines, 1
+    return inspect.getblock(lines[lineno:]), lineno+1
+
 def lasti2lineno(code, lasti):
     linestarts = list(dis.findlinestarts(code))
     linestarts.reverse()
@@ -377,7 +386,8 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         # stop when the debuggee is returning from such generators.
         prefix = 'Internal ' if (not exc_traceback
                                     and exc_type is StopIteration) else ''
-        self.message('%s%s' % (prefix, self._format_exc(exc_value)))
+        self.message('%s%s' % (prefix,
+            traceback.format_exception_only(exc_type, exc_value)[-1].strip()))
         self.interaction(frame, exc_traceback)
 
     # General interaction function
@@ -701,9 +711,6 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         if comma > 0:
             # parse stuff after comma: "condition"
             cond = arg[comma+1:].lstrip()
-            if err := self._compile_error_message(cond):
-                self.error('Invalid condition %s: %r' % (cond, err))
-                return
             arg = arg[:comma].rstrip()
         # parse stuff before comma: [filename:]lineno | function
         colon = arg.rfind(':')
@@ -889,9 +896,6 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         args = arg.split(' ', 1)
         try:
             cond = args[1]
-            if err := self._compile_error_message(cond):
-                self.error('Invalid condition %s: %r' % (cond, err))
-                return
         except IndexError:
             cond = None
         try:
@@ -1254,12 +1258,14 @@ class Pdb(bdb.Bdb, cmd.Cmd):
                 return eval(arg, self.curframe.f_globals, self.curframe_locals)
             else:
                 return eval(arg, frame.f_globals, frame.f_locals)
-        except BaseException as exc:
-            return _rstr('** raised %s **' % self._format_exc(exc))
+        except:
+            exc_info = sys.exc_info()[:2]
+            err = traceback.format_exception_only(*exc_info)[-1].strip()
+            return _rstr('** raised %s **' % err)
 
     def _error_exc(self):
-        exc = sys.exc_info()[1]
-        self.error(self._format_exc(exc))
+        exc_info = sys.exc_info()[:2]
+        self.error(traceback.format_exception_only(*exc_info)[-1].strip())
 
     def _msg_val_func(self, arg, func):
         try:
@@ -1351,7 +1357,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         filename = self.curframe.f_code.co_filename
         breaklist = self.get_file_breaks(filename)
         try:
-            lines, lineno = inspect.getsourcelines(self.curframe)
+            lines, lineno = getsourcelines(self.curframe)
         except OSError as err:
             self.error(err)
             return
@@ -1367,7 +1373,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         except:
             return
         try:
-            lines, lineno = inspect.getsourcelines(obj)
+            lines, lineno = getsourcelines(obj)
         except (OSError, TypeError) as err:
             self.error(err)
             return
@@ -1440,19 +1446,13 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         Without expression, list all display expressions for the current frame.
         """
         if not arg:
-            if self.displaying:
-                self.message('Currently displaying:')
-                for item in self.displaying.get(self.curframe, {}).items():
-                    self.message('%s: %r' % item)
-            else:
-                self.message('No expression is being displayed')
+            self.message('Currently displaying:')
+            for item in self.displaying.get(self.curframe, {}).items():
+                self.message('%s: %r' % item)
         else:
-            if err := self._compile_error_message(arg):
-                self.error('Unable to display %s: %r' % (arg, err))
-            else:
-                val = self._getval_except(arg)
-                self.displaying.setdefault(self.curframe, {})[arg] = val
-                self.message('display %s: %r' % (arg, val))
+            val = self._getval_except(arg)
+            self.displaying.setdefault(self.curframe, {})[arg] = val
+            self.message('display %s: %r' % (arg, val))
 
     complete_display = _complete_expression
 
@@ -1651,16 +1651,6 @@ class Pdb(bdb.Bdb, cmd.Cmd):
 
         self.run(target.code)
 
-    def _format_exc(self, exc: BaseException):
-        return traceback.format_exception_only(exc)[-1].strip()
-
-    def _compile_error_message(self, expr):
-        """Return the error message as string if compiling `expr` fails."""
-        try:
-            compile(expr, "<stdin>", "eval")
-        except SyntaxError as exc:
-            return _rstr(self._format_exc(exc))
-        return ""
 
 # Collect all command help into docstring, if not run with -OO
 
@@ -1684,27 +1674,9 @@ if __doc__ is not None:
 # Simplified interface
 
 def run(statement, globals=None, locals=None):
-    """Execute the *statement* (given as a string or a code object)
-    under debugger control.
-
-    The debugger prompt appears before any code is executed; you can set
-    breakpoints and type continue, or you can step through the statement
-    using step or next.
-
-    The optional *globals* and *locals* arguments specify the
-    environment in which the code is executed; by default the
-    dictionary of the module __main__ is used (see the explanation of
-    the built-in exec() or eval() functions.).
-    """
     Pdb().run(statement, globals, locals)
 
 def runeval(expression, globals=None, locals=None):
-    """Evaluate the *expression* (given as a string or a code object)
-    under debugger control.
-
-    When runeval() returns, it returns the value of the expression.
-    Otherwise this function is similar to run().
-    """
     return Pdb().runeval(expression, globals, locals)
 
 def runctx(statement, globals, locals):
@@ -1712,23 +1684,9 @@ def runctx(statement, globals, locals):
     run(statement, globals, locals)
 
 def runcall(*args, **kwds):
-    """Call the function (a function or method object, not a string)
-    with the given arguments.
-
-    When runcall() returns, it returns whatever the function call
-    returned. The debugger prompt appears as soon as the function is
-    entered.
-    """
     return Pdb().runcall(*args, **kwds)
 
 def set_trace(*, header=None):
-    """Enter the debugger at the calling stack frame.
-
-    This is useful to hard-code a breakpoint at a given point in a
-    program, even if the code is not otherwise being debugged (e.g. when
-    an assertion fails). If given, *header* is printed to the console
-    just before debugging begins.
-    """
     pdb = Pdb()
     if header is not None:
         pdb.message(header)
@@ -1737,12 +1695,6 @@ def set_trace(*, header=None):
 # Post-Mortem interface
 
 def post_mortem(t=None):
-    """Enter post-mortem debugging of the given *traceback* object.
-
-    If no traceback is given, it uses the one of the exception that is
-    currently being handled (an exception must be being handled if the
-    default is to be used).
-    """
     # handling the default
     if t is None:
         # sys.exc_info() returns (type, value, traceback) if an exception is
@@ -1757,12 +1709,7 @@ def post_mortem(t=None):
     p.interaction(None, t)
 
 def pm():
-    """Enter post-mortem debugging of the traceback found in sys.last_traceback."""
-    if hasattr(sys, 'last_exc'):
-        tb = sys.last_exc.__traceback__
-    else:
-        tb = sys.last_traceback
-    post_mortem(tb)
+    post_mortem(sys.last_traceback)
 
 
 # Main program for testing

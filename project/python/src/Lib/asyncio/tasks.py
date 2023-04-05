@@ -24,7 +24,7 @@ from . import coroutines
 from . import events
 from . import exceptions
 from . import futures
-from . import timeouts
+from .coroutines import _is_coroutine
 
 # Helper to generate new task names
 # This uses itertools.count() instead of a "+= 1" operation because the latter
@@ -138,9 +138,6 @@ class Task(futures._PyFuture):  # Inherit Python Task implementation
 
     def get_coro(self):
         return self._coro
-
-    def get_context(self):
-        return self._context
 
     def get_name(self):
         return self._name
@@ -437,44 +434,65 @@ async def wait_for(fut, timeout):
 
     If the wait is cancelled, the task is also cancelled.
 
-    If the task supresses the cancellation and returns a value instead,
-    that value is returned.
-
     This function is a coroutine.
     """
-    # The special case for timeout <= 0 is for the following case:
-    #
-    # async def test_waitfor():
-    #     func_started = False
-    #
-    #     async def func():
-    #         nonlocal func_started
-    #         func_started = True
-    #
-    #     try:
-    #         await asyncio.wait_for(func(), 0)
-    #     except asyncio.TimeoutError:
-    #         assert not func_started
-    #     else:
-    #         assert False
-    #
-    # asyncio.run(test_waitfor())
+    loop = events.get_running_loop()
 
+    if timeout is None:
+        return await fut
 
-    if timeout is not None and timeout <= 0:
-        fut = ensure_future(fut)
+    if timeout <= 0:
+        fut = ensure_future(fut, loop=loop)
 
         if fut.done():
             return fut.result()
 
-        await _cancel_and_wait(fut)
+        await _cancel_and_wait(fut, loop=loop)
         try:
             return fut.result()
         except exceptions.CancelledError as exc:
-            raise TimeoutError from exc
+            raise exceptions.TimeoutError() from exc
 
-    async with timeouts.timeout(timeout):
-        return await fut
+    waiter = loop.create_future()
+    timeout_handle = loop.call_later(timeout, _release_waiter, waiter)
+    cb = functools.partial(_release_waiter, waiter)
+
+    fut = ensure_future(fut, loop=loop)
+    fut.add_done_callback(cb)
+
+    try:
+        # wait until the future completes or the timeout
+        try:
+            await waiter
+        except exceptions.CancelledError:
+            if fut.done():
+                return fut.result()
+            else:
+                fut.remove_done_callback(cb)
+                # We must ensure that the task is not running
+                # after wait_for() returns.
+                # See https://bugs.python.org/issue32751
+                await _cancel_and_wait(fut, loop=loop)
+                raise
+
+        if fut.done():
+            return fut.result()
+        else:
+            fut.remove_done_callback(cb)
+            # We must ensure that the task is not running
+            # after wait_for() returns.
+            # See https://bugs.python.org/issue32751
+            await _cancel_and_wait(fut, loop=loop)
+            # In case task cancellation failed with some
+            # exception, we should re-raise it
+            # See https://bugs.python.org/issue40607
+            try:
+                return fut.result()
+            except exceptions.CancelledError as exc:
+                raise exceptions.TimeoutError() from exc
+    finally:
+        timeout_handle.cancel()
+
 
 async def _wait(fs, timeout, return_when, loop):
     """Internal helper for wait().
@@ -520,10 +538,9 @@ async def _wait(fs, timeout, return_when, loop):
     return done, pending
 
 
-async def _cancel_and_wait(fut):
+async def _cancel_and_wait(fut, loop):
     """Cancel the *fut* future or task and wait until it completes."""
 
-    loop = events.get_running_loop()
     waiter = loop.create_future()
     cb = functools.partial(_release_waiter, waiter)
     fut.add_done_callback(cb)
@@ -562,7 +579,7 @@ def as_completed(fs, *, timeout=None):
     from .queues import Queue  # Import here to avoid circular import problem.
     done = Queue()
 
-    loop = events.get_event_loop()
+    loop = events._get_event_loop()
     todo = {ensure_future(f, loop=loop) for f in set(fs)}
     timeout_handle = None
 
@@ -629,31 +646,44 @@ def ensure_future(coro_or_future, *, loop=None):
 
     If the argument is a Future, it is returned directly.
     """
+    return _ensure_future(coro_or_future, loop=loop)
+
+
+def _ensure_future(coro_or_future, *, loop=None):
     if futures.isfuture(coro_or_future):
         if loop is not None and loop is not futures._get_loop(coro_or_future):
             raise ValueError('The future belongs to a different loop than '
                             'the one specified as the loop argument')
         return coro_or_future
-    should_close = True
+    called_wrap_awaitable = False
     if not coroutines.iscoroutine(coro_or_future):
         if inspect.isawaitable(coro_or_future):
-            async def _wrap_awaitable(awaitable):
-                return await awaitable
-
             coro_or_future = _wrap_awaitable(coro_or_future)
-            should_close = False
+            called_wrap_awaitable = True
         else:
             raise TypeError('An asyncio.Future, a coroutine or an awaitable '
                             'is required')
 
     if loop is None:
-        loop = events.get_event_loop()
+        loop = events._get_event_loop(stacklevel=4)
     try:
         return loop.create_task(coro_or_future)
     except RuntimeError:
-        if should_close:
+        if not called_wrap_awaitable:
             coro_or_future.close()
         raise
+
+
+@types.coroutine
+def _wrap_awaitable(awaitable):
+    """Helper for asyncio.ensure_future().
+
+    Wraps awaitable (an object with __await__) into a coroutine
+    that will later be wrapped in a Task by ensure_future().
+    """
+    return (yield from awaitable.__await__())
+
+_wrap_awaitable._is_coroutine = _is_coroutine
 
 
 class _GatheringFuture(futures.Future):
@@ -716,7 +746,7 @@ def gather(*coros_or_futures, return_exceptions=False):
     gather won't cancel any other awaitables.
     """
     if not coros_or_futures:
-        loop = events.get_event_loop()
+        loop = events._get_event_loop()
         outer = loop.create_future()
         outer.set_result([])
         return outer
@@ -784,7 +814,7 @@ def gather(*coros_or_futures, return_exceptions=False):
     outer = None  # bpo-46672
     for arg in coros_or_futures:
         if arg not in arg_to_fut:
-            fut = ensure_future(arg, loop=loop)
+            fut = _ensure_future(arg, loop=loop)
             if loop is None:
                 loop = futures._get_loop(fut)
             if fut is not arg:
@@ -841,7 +871,7 @@ def shield(arg):
     weak references to tasks. A task that isn't referenced elsewhere
     may get garbage collected at any time, even before it's done.
     """
-    inner = ensure_future(arg)
+    inner = _ensure_future(arg)
     if inner.done():
         # Shortcut.
         return inner
@@ -931,7 +961,6 @@ def _unregister_task(task):
     _all_tasks.discard(task)
 
 
-_py_current_task = current_task
 _py_register_task = _register_task
 _py_unregister_task = _unregister_task
 _py_enter_task = _enter_task
@@ -941,12 +970,10 @@ _py_leave_task = _leave_task
 try:
     from _asyncio import (_register_task, _unregister_task,
                           _enter_task, _leave_task,
-                          _all_tasks, _current_tasks,
-                          current_task)
+                          _all_tasks, _current_tasks)
 except ImportError:
     pass
 else:
-    _c_current_task = current_task
     _c_register_task = _register_task
     _c_unregister_task = _unregister_task
     _c_enter_task = _enter_task

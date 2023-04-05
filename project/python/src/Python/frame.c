@@ -1,6 +1,4 @@
 
-#define _PY_INTERPRETER
-
 #include "Python.h"
 #include "frameobject.h"
 #include "pycore_code.h"          // stats
@@ -13,7 +11,7 @@ _PyFrame_Traverse(_PyInterpreterFrame *frame, visitproc visit, void *arg)
 {
     Py_VISIT(frame->frame_obj);
     Py_VISIT(frame->f_locals);
-    Py_VISIT(frame->f_funcobj);
+    Py_VISIT(frame->f_func);
     Py_VISIT(frame->f_code);
    /* locals */
     PyObject **locals = _PyFrame_GetLocalsArray(frame);
@@ -29,14 +27,17 @@ PyFrameObject *
 _PyFrame_MakeAndSetFrameObject(_PyInterpreterFrame *frame)
 {
     assert(frame->frame_obj == NULL);
-    PyObject *exc = PyErr_GetRaisedException();
+    PyObject *error_type, *error_value, *error_traceback;
+    PyErr_Fetch(&error_type, &error_value, &error_traceback);
 
     PyFrameObject *f = _PyFrame_New_NoTrack(frame->f_code);
     if (f == NULL) {
-        Py_XDECREF(exc);
+        Py_XDECREF(error_type);
+        Py_XDECREF(error_value);
+        Py_XDECREF(error_traceback);
         return NULL;
     }
-    PyErr_SetRaisedException(exc);
+    PyErr_Restore(error_type, error_value, error_traceback);
     if (frame->frame_obj) {
         // GH-97002: How did we get into this horrible situation? Most likely,
         // allocating f triggered a GC collection, which ran some code that
@@ -77,11 +78,9 @@ _PyFrame_Copy(_PyInterpreterFrame *src, _PyInterpreterFrame *dest)
 static void
 take_ownership(PyFrameObject *f, _PyInterpreterFrame *frame)
 {
-    assert(frame->owner != FRAME_OWNED_BY_CSTACK);
     assert(frame->owner != FRAME_OWNED_BY_FRAME_OBJECT);
     assert(frame->owner != FRAME_CLEARED);
     Py_ssize_t size = ((char*)&frame->localsplus[frame->stacktop]) - (char *)frame;
-    Py_INCREF(frame->f_code);
     memcpy((_PyInterpreterFrame *)f->_f_frame_data, frame, size);
     frame = (_PyInterpreterFrame *)f->_f_frame_data;
     f->f_frame = frame;
@@ -94,10 +93,11 @@ take_ownership(PyFrameObject *f, _PyInterpreterFrame *frame)
     }
     assert(!_PyFrame_IsIncomplete(frame));
     assert(f->f_back == NULL);
-    _PyInterpreterFrame *prev = _PyFrame_GetFirstComplete(frame->previous);
-    frame->previous = NULL;
+    _PyInterpreterFrame *prev = frame->previous;
+    while (prev && _PyFrame_IsIncomplete(prev)) {
+        prev = prev->previous;
+    }
     if (prev) {
-        assert(prev->owner != FRAME_OWNED_BY_CSTACK);
         /* Link PyFrameObjects.f_back and remove link through _PyInterpreterFrame.previous */
         PyFrameObject *back = _PyFrame_GetFrameObject(prev);
         if (back == NULL) {
@@ -109,6 +109,7 @@ take_ownership(PyFrameObject *f, _PyInterpreterFrame *frame)
         else {
             f->f_back = (PyFrameObject *)Py_NewRef(back);
         }
+        frame->previous = NULL;
     }
     if (!_PyObject_GC_IS_TRACKED((PyObject *)f)) {
         _PyObject_GC_TRACK((PyObject *)f);
@@ -116,7 +117,7 @@ take_ownership(PyFrameObject *f, _PyInterpreterFrame *frame)
 }
 
 void
-_PyFrame_ClearExceptCode(_PyInterpreterFrame *frame)
+_PyFrame_Clear(_PyInterpreterFrame *frame)
 {
     /* It is the responsibility of the owning generator/coroutine
      * to have cleared the enclosing generator, if any. */
@@ -141,7 +142,24 @@ _PyFrame_ClearExceptCode(_PyInterpreterFrame *frame)
     }
     Py_XDECREF(frame->frame_obj);
     Py_XDECREF(frame->f_locals);
-    Py_DECREF(frame->f_funcobj);
+    Py_DECREF(frame->f_func);
+    Py_DECREF(frame->f_code);
+}
+
+/* Consumes reference to func */
+_PyInterpreterFrame *
+_PyFrame_Push(PyThreadState *tstate, PyFunctionObject *func)
+{
+    PyCodeObject *code = (PyCodeObject *)func->func_code;
+    size_t size = code->co_nlocalsplus + code->co_stacksize + FRAME_SPECIALS_SIZE;
+    CALL_STAT_INC(frames_pushed);
+    _PyInterpreterFrame *new_frame = _PyThreadState_BumpFramePointer(tstate, size);
+    if (new_frame == NULL) {
+        Py_DECREF(func);
+        return NULL;
+    }
+    _PyFrame_InitializeSpecials(new_frame, func, NULL, code->co_nlocalsplus);
+    return new_frame;
 }
 
 int

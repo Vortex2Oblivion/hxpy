@@ -1,12 +1,11 @@
 import collections
-import itertools
-import pathlib
 import operator
+import pathlib
 import zipfile
 
 from . import abc
 
-from ._itertools import only
+from ._itertools import unique_everseen
 
 
 def remove_duplicates(items):
@@ -42,10 +41,8 @@ class ZipReader(abc.TraversableResources):
             raise FileNotFoundError(exc.args[0])
 
     def is_resource(self, path):
-        """
-        Workaround for `zipfile.Path.is_file` returning true
-        for non-existent paths.
-        """
+        # workaround for `zipfile.Path.is_file` returning true
+        # for non-existent paths.
         target = self.files().joinpath(path)
         return target.is_file() and target.exists()
 
@@ -70,10 +67,8 @@ class MultiplexedPath(abc.Traversable):
             raise NotADirectoryError('MultiplexedPath only supports directories')
 
     def iterdir(self):
-        children = (child for path in self._paths for child in path.iterdir())
-        by_name = operator.attrgetter('name')
-        groups = itertools.groupby(sorted(children, key=by_name), key=by_name)
-        return map(self._follow, (locs for name, locs in groups))
+        files = (file for path in self._paths for file in path.iterdir())
+        return unique_everseen(files, key=operator.attrgetter('name'))
 
     def read_bytes(self):
         raise FileNotFoundError(f'{self} is not a file')
@@ -87,32 +82,15 @@ class MultiplexedPath(abc.Traversable):
     def is_file(self):
         return False
 
-    def joinpath(self, *descendants):
-        try:
-            return super().joinpath(*descendants)
-        except abc.TraversalError:
-            # One of the paths did not resolve (a directory does not exist).
-            # Just return something that will not exist.
-            return self._paths[0].joinpath(*descendants)
+    def joinpath(self, child):
+        # first try to find child in current paths
+        for file in self.iterdir():
+            if file.name == child:
+                return file
+        # if it does not exist, construct it with the first path
+        return self._paths[0] / child
 
-    @classmethod
-    def _follow(cls, children):
-        """
-        Construct a MultiplexedPath if needed.
-
-        If children contains a sole element, return it.
-        Otherwise, return a MultiplexedPath of the items.
-        Unless one of the items is not a Directory, then return the first.
-        """
-        subdirs, one_dir, one_file = itertools.tee(children, 3)
-
-        try:
-            return only(one_dir)
-        except ValueError:
-            try:
-                return cls(*subdirs)
-            except NotADirectoryError:
-                return next(one_file)
+    __truediv__ = joinpath
 
     def open(self, *args, **kwargs):
         raise FileNotFoundError(f'{self} is not a file')

@@ -18,10 +18,6 @@ void _PyContext_Fini(PyInterpreterState *);
 
 /* other API */
 
-typedef struct {
-    PyObject_HEAD
-} _PyContextTokenMissing;
-
 #ifndef WITH_FREELISTS
 // without freelists
 #  define PyContext_MAXFREELIST 0

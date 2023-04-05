@@ -74,8 +74,8 @@ class Using__package__:
         self.assertEqual(module.__name__, 'pkg')
 
     def test_warn_when_package_and_spec_disagree(self):
-        # Raise a DeprecationWarning if __package__ != __spec__.parent.
-        with self.assertWarns(DeprecationWarning):
+        # Raise an ImportWarning if __package__ != __spec__.parent.
+        with self.assertWarns(ImportWarning):
             self.import_module({'__package__': 'pkg.fake',
                                 '__spec__': FakeSpec('pkg.fakefake')})
 

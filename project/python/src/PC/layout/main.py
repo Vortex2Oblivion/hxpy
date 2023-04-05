@@ -8,8 +8,11 @@ __author__ = "Steve Dower <steve.dower@python.org>"
 __version__ = "3.8"
 
 import argparse
+import functools
 import os
+import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import zipfile
@@ -35,7 +38,7 @@ TEST_DIRS_ONLY = FileNameSet("test", "tests")
 
 IDLE_DIRS_ONLY = FileNameSet("idlelib")
 
-TCLTK_PYDS_ONLY = FileStemSet("tcl*", "tk*", "_tkinter", "zlib1")
+TCLTK_PYDS_ONLY = FileStemSet("tcl*", "tk*", "_tkinter")
 TCLTK_DIRS_ONLY = FileNameSet("tkinter", "turtledemo")
 TCLTK_FILES_ONLY = FileNameSet("turtle.py")
 
@@ -58,7 +61,7 @@ CDF_FILES = FileSuffixSet(".cdf")
 
 DATA_DIRS = FileNameSet("data")
 
-TOOLS_DIRS = FileNameSet("scripts", "i18n", "parser")
+TOOLS_DIRS = FileNameSet("scripts", "i18n", "demo", "parser")
 TOOLS_FILES = FileSuffixSet(".py", ".pyw", ".txt")
 
 

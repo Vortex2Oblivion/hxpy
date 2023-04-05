@@ -113,7 +113,7 @@ PyAPI_DATA(PyTypeObject) PyUnicodeIter_Type;
 
 #define PyUnicode_Check(op) \
     PyType_FastSubclass(Py_TYPE(op), Py_TPFLAGS_UNICODE_SUBCLASS)
-#define PyUnicode_CheckExact(op) Py_IS_TYPE((op), &PyUnicode_Type)
+#define PyUnicode_CheckExact(op) Py_IS_TYPE(op, &PyUnicode_Type)
 
 /* --- Constants ---------------------------------------------------------- */
 
@@ -171,6 +171,13 @@ PyAPI_FUNC(Py_ssize_t) PyUnicode_GetLength(
 );
 #endif
 
+/* Get the number of Py_UNICODE units in the
+   string representation. */
+
+Py_DEPRECATED(3.3) PyAPI_FUNC(Py_ssize_t) PyUnicode_GetSize(
+    PyObject *unicode           /* Unicode object */
+    );
+
 #if !defined(Py_LIMITED_API) || Py_LIMITED_API+0 >= 0x03030000
 /* Read a character from the string. */
 
@@ -191,7 +198,9 @@ PyAPI_FUNC(int) PyUnicode_WriteChar(
     );
 #endif
 
-/* Resize a Unicode object. The length is the number of codepoints.
+/* Resize a Unicode object. The length is the number of characters, except
+   if the kind of the string is PyUnicode_WCHAR_KIND: in this case, the length
+   is the number of Py_UNICODE characters.
 
    *unicode is modified to point to the new (resized) object and 0
    returned on success.
@@ -255,6 +264,10 @@ PyAPI_FUNC(void) PyUnicode_InternInPlace(PyObject **);
 PyAPI_FUNC(PyObject *) PyUnicode_InternFromString(
     const char *u              /* UTF-8 encoded string */
     );
+
+// PyUnicode_InternImmortal() is deprecated since Python 3.10
+// and will be removed in Python 3.12. Use PyUnicode_InternInPlace() instead.
+Py_DEPRECATED(3.10) PyAPI_FUNC(void) PyUnicode_InternImmortal(PyObject **);
 
 /* --- wchar_t support for platforms which support it --------------------- */
 
@@ -755,22 +768,38 @@ PyAPI_FUNC(int) PyUnicode_FSConverter(PyObject*, void*);
 
 PyAPI_FUNC(int) PyUnicode_FSDecoder(PyObject*, void*);
 
-/* Decode a null-terminated string from the Python filesystem encoding
-   and error handler.
+/* Decode a null-terminated string using Py_FileSystemDefaultEncoding
+   and the "surrogateescape" error handler.
 
-   If the string length is known, use PyUnicode_DecodeFSDefaultAndSize(). */
+   If Py_FileSystemDefaultEncoding is not set, fall back to the locale
+   encoding.
+
+   Use PyUnicode_DecodeFSDefaultAndSize() if the string length is known.
+*/
+
 PyAPI_FUNC(PyObject*) PyUnicode_DecodeFSDefault(
     const char *s               /* encoded string */
     );
 
-/* Decode a string from the Python filesystem encoding and error handler. */
+/* Decode a string using Py_FileSystemDefaultEncoding
+   and the "surrogateescape" error handler.
+
+   If Py_FileSystemDefaultEncoding is not set, fall back to the locale
+   encoding.
+*/
+
 PyAPI_FUNC(PyObject*) PyUnicode_DecodeFSDefaultAndSize(
     const char *s,               /* encoded string */
     Py_ssize_t size              /* size */
     );
 
-/* Encode a Unicode object to the Python filesystem encoding and error handler.
-   Return bytes. */
+/* Encode a Unicode object to Py_FileSystemDefaultEncoding with the
+   "surrogateescape" error handler, and return bytes.
+
+   If Py_FileSystemDefaultEncoding is not set, fall back to the locale
+   encoding.
+*/
+
 PyAPI_FUNC(PyObject*) PyUnicode_EncodeFSDefault(
     PyObject *unicode
     );

@@ -2,12 +2,6 @@
 preserve
 [clinic start generated code]*/
 
-#if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-#  include "pycore_gc.h"            // PyGC_Head
-#  include "pycore_runtime.h"       // _Py_ID()
-#endif
-
-
 PyDoc_STRVAR(float_is_integer__doc__,
 "is_integer($self, /)\n"
 "--\n"
@@ -173,10 +167,12 @@ PyDoc_STRVAR(float_as_integer_ratio__doc__,
 "as_integer_ratio($self, /)\n"
 "--\n"
 "\n"
-"Return a pair of integers, whose ratio is exactly equal to the original float.\n"
+"Return integer ratio.\n"
 "\n"
-"The ratio is in lowest terms and has a positive denominator.  Raise\n"
-"OverflowError on infinities and a ValueError on NaNs.\n"
+"Return a pair of integers, whose ratio is exactly equal to the original float\n"
+"and with a positive denominator.\n"
+"\n"
+"Raise OverflowError on infinities and a ValueError on NaNs.\n"
 "\n"
 ">>> (10.0).as_integer_ratio()\n"
 "(10, 1)\n"
@@ -210,10 +206,10 @@ static PyObject *
 float_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
     PyObject *return_value = NULL;
-    PyTypeObject *base_tp = &PyFloat_Type;
     PyObject *x = NULL;
 
-    if ((type == base_tp || type->tp_init == base_tp->tp_init) &&
+    if ((type == &PyFloat_Type ||
+         type->tp_init == PyFloat_Type.tp_init) &&
         !_PyArg_NoKeywords("float", kwargs)) {
         goto exit;
     }
@@ -325,4 +321,4 @@ float___format__(PyObject *self, PyObject *arg)
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=ea329577074911b9 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=a6e6467624a92a43 input=a9049054013a1b77]*/

@@ -85,8 +85,9 @@ namespace_repr(PyObject *ns)
     if (pairs == NULL)
         goto error;
 
-    assert(((_PyNamespaceObject *)ns)->ns_dict != NULL);
-    d = Py_NewRef(((_PyNamespaceObject *)ns)->ns_dict);
+    d = ((_PyNamespaceObject *)ns)->ns_dict;
+    assert(d != NULL);
+    Py_INCREF(d);
 
     keys = PyDict_Keys(d);
     if (keys == NULL)

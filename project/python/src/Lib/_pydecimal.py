@@ -159,7 +159,7 @@ import sys
 
 try:
     from collections import namedtuple as _namedtuple
-    DecimalTuple = _namedtuple('DecimalTuple', 'sign digits exponent', module='decimal')
+    DecimalTuple = _namedtuple('DecimalTuple', 'sign digits exponent')
 except ImportError:
     DecimalTuple = lambda *args: args
 

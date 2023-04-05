@@ -58,13 +58,8 @@ typedef struct {
     PyObject *weakreflist;      /* List of weak references */
 } PySetObject;
 
-#define _PySet_CAST(so) \
-    (assert(PyAnySet_Check(so)), _Py_CAST(PySetObject*, so))
-
-static inline Py_ssize_t PySet_GET_SIZE(PyObject *so) {
-    return _PySet_CAST(so)->used;
-}
-#define PySet_GET_SIZE(so) PySet_GET_SIZE(_PyObject_CAST(so))
+#define PySet_GET_SIZE(so) \
+    (assert(PyAnySet_Check(so)), (((PySetObject *)(so))->used))
 
 PyAPI_DATA(PyObject *) _PySet_Dummy;
 

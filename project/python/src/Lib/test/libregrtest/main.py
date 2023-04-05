@@ -17,8 +17,7 @@ from test.libregrtest.runtest import (
     ChildError, DidNotRun)
 from test.libregrtest.setup import setup_tests
 from test.libregrtest.pgo import setup_pgo_tests
-from test.libregrtest.utils import (removepy, count, format_duration,
-                                    printlist, get_build_info)
+from test.libregrtest.utils import removepy, count, format_duration, printlist
 from test import support
 from test.support import os_helper
 from test.support import threading_helper
@@ -28,11 +27,6 @@ from test.support import threading_helper
 # Used to protect against threading._shutdown() hang.
 # Must be smaller than buildbot "1200 seconds without output" limit.
 EXIT_TIMEOUT = 120.0
-
-EXITCODE_BAD_TEST = 2
-EXITCODE_INTERRUPTED = 130
-EXITCODE_ENV_CHANGED = 3
-EXITCODE_NO_TESTS_RAN = 4
 
 
 class Regrtest:
@@ -492,7 +486,6 @@ class Regrtest:
         print("==", platform.python_implementation(), *sys.version.split())
         print("==", platform.platform(aliased=True),
                       "%s-endian" % sys.byteorder)
-        print("== Python build:", ' '.join(get_build_info()))
         print("== cwd:", os.getcwd())
         cpu_count = os.cpu_count()
         if cpu_count:
@@ -500,18 +493,15 @@ class Regrtest:
         print("== encodings: locale=%s, FS=%s"
               % (locale.getencoding(), sys.getfilesystemencoding()))
 
-    def no_tests_run(self):
-        return not any((self.good, self.bad, self.skipped, self.interrupted,
-                        self.environment_changed))
-
     def get_tests_result(self):
         result = []
         if self.bad:
             result.append("FAILURE")
         elif self.ns.fail_env_changed and self.environment_changed:
             result.append("ENV CHANGED")
-        elif self.no_tests_run():
-            result.append("NO TESTS RAN")
+        elif not any((self.good, self.bad, self.skipped, self.interrupted,
+            self.environment_changed)):
+            result.append("NO TEST RUN")
 
         if self.interrupted:
             result.append("INTERRUPTED")
@@ -760,13 +750,11 @@ class Regrtest:
         self.save_xml_result()
 
         if self.bad:
-            sys.exit(EXITCODE_BAD_TEST)
+            sys.exit(2)
         if self.interrupted:
-            sys.exit(EXITCODE_INTERRUPTED)
+            sys.exit(130)
         if self.ns.fail_env_changed and self.environment_changed:
-            sys.exit(EXITCODE_ENV_CHANGED)
-        if self.no_tests_run():
-            sys.exit(EXITCODE_NO_TESTS_RAN)
+            sys.exit(3)
         sys.exit(0)
 
 

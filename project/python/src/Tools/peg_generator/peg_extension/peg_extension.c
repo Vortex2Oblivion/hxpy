@@ -12,7 +12,8 @@ _build_return_object(mod_ty module, int mode, PyObject *filename_ob, PyArena *ar
     } else if (mode == 1) {
         result = PyAST_mod2obj(module);
     } else {
-        result = Py_NewRef(Py_None);
+        result = Py_None;
+        Py_INCREF(result);
     }
 
     return result;

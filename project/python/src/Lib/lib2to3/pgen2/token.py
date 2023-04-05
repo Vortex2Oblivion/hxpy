@@ -72,7 +72,7 @@ NT_OFFSET = 256
 
 tok_name = {}
 for _name, _value in list(globals().items()):
-    if isinstance(_value, int):
+    if type(_value) is type(0):
         tok_name[_value] = _name
 
 

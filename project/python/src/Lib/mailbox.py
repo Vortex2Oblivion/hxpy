@@ -1956,7 +1956,10 @@ class _ProxyFile:
 
     def __iter__(self):
         """Iterate over lines."""
-        while line := self.readline():
+        while True:
+            line = self.readline()
+            if not line:
+                return
             yield line
 
     def tell(self):

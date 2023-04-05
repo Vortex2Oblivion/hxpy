@@ -30,9 +30,7 @@
 #  include <i86.h>
 #else
 #  ifdef MS_WINDOWS
-#    ifndef WIN32_LEAN_AND_MEAN
-#      define WIN32_LEAN_AND_MEAN
-#    endif
+#    define WIN32_LEAN_AND_MEAN
 #    include <windows.h>
 #  endif /* MS_WINDOWS */
 #endif /* !__WATCOMC__ || __QNX__ */
@@ -62,56 +60,6 @@
 
 
 #define SEC_TO_NS (1000 * 1000 * 1000)
-
-
-#if defined(HAVE_TIMES) || defined(HAVE_CLOCK)
-static int
-check_ticks_per_second(long tps, const char *context)
-{
-    /* Effectively, check that _PyTime_MulDiv(t, SEC_TO_NS, ticks_per_second)
-       cannot overflow. */
-    if (tps >= 0 && (_PyTime_t)tps > _PyTime_MAX / SEC_TO_NS) {
-        PyErr_Format(PyExc_OverflowError, "%s is too large", context);
-        return -1;
-    }
-    return 0;
-}
-#endif  /* HAVE_TIMES || HAVE_CLOCK */
-
-#ifdef HAVE_TIMES
-
-# define ticks_per_second _PyRuntime.time.ticks_per_second
-
-static void
-ensure_ticks_per_second(void)
-{
-    if (_PyRuntime.time.ticks_per_second_initialized) {
-        return;
-    }
-    _PyRuntime.time.ticks_per_second_initialized = 1;
-# if defined(HAVE_SYSCONF) && defined(_SC_CLK_TCK)
-    ticks_per_second = sysconf(_SC_CLK_TCK);
-    if (ticks_per_second < 1) {
-        ticks_per_second = -1;
-    }
-# elif defined(HZ)
-    ticks_per_second = HZ;
-# else
-    ticks_per_second = 60;  /* magic fallback value; may be bogus */
-# endif
-}
-
-#endif  /* HAVE_TIMES */
-
-
-PyStatus
-_PyTime_Init(void)
-{
-#ifdef HAVE_TIMES
-    ensure_ticks_per_second();
-#endif
-    return PyStatus_Ok();
-}
 
 
 /* Forward declarations */
@@ -192,8 +140,18 @@ Return the current time in nanoseconds since the Epoch.");
 static int
 _PyTime_GetClockWithInfo(_PyTime_t *tp, _Py_clock_info_t *info)
 {
-    if (check_ticks_per_second(CLOCKS_PER_SEC, "CLOCKS_PER_SEC") < 0) {
-        return -1;
+    static int initialized = 0;
+
+    if (!initialized) {
+        initialized = 1;
+
+        /* Make sure that _PyTime_MulDiv(ticks, SEC_TO_NS, CLOCKS_PER_SEC)
+           above cannot overflow */
+        if ((_PyTime_t)CLOCKS_PER_SEC > _PyTime_MAX / SEC_TO_NS) {
+            PyErr_SetString(PyExc_OverflowError,
+                            "CLOCKS_PER_SEC is too large");
+            return -1;
+        }
     }
 
     if (info) {
@@ -952,9 +910,14 @@ is not present, current time as returned by localtime() is used.\n\
 static PyObject *
 time_strptime(PyObject *self, PyObject *args)
 {
-    PyObject *func, *result;
+    PyObject *module, *func, *result;
 
-    func = _PyImport_GetModuleAttrString("_strptime", "_strptime_time");
+    module = PyImport_ImportModule("_strptime");
+    if (!module)
+        return NULL;
+
+    func = PyObject_GetAttr(module, &_Py_ID(_strptime_time));
+    Py_DECREF(module);
     if (!func) {
         return NULL;
     }
@@ -1137,9 +1100,7 @@ time_tzset(PyObject *self, PyObject *unused)
         return NULL;
     }
 
-#if !defined(MS_WINDOWS) || defined(MS_WINDOWS_DESKTOP) || defined(MS_WINDOWS_SYSTEM)
     tzset();
-#endif
 
     /* Reset timezone, altzone, daylight and tzname */
     if (init_timezone(m) < 0) {
@@ -1352,10 +1313,36 @@ _PyTime_GetProcessTimeWithInfo(_PyTime_t *tp, _Py_clock_info_t *info)
     struct tms t;
 
     if (times(&t) != (clock_t)-1) {
-        assert(_PyRuntime.time.ticks_per_second_initialized);
-        if (check_ticks_per_second(ticks_per_second, "_SC_CLK_TCK") < 0) {
-            return -1;
+        static long ticks_per_second = -1;
+
+        if (ticks_per_second == -1) {
+            long freq;
+#if defined(HAVE_SYSCONF) && defined(_SC_CLK_TCK)
+            freq = sysconf(_SC_CLK_TCK);
+            if (freq < 1) {
+                freq = -1;
+            }
+#elif defined(HZ)
+            freq = HZ;
+#else
+            freq = 60; /* magic fallback value; may be bogus */
+#endif
+
+            if (freq != -1) {
+                /* check that _PyTime_MulDiv(t, SEC_TO_NS, ticks_per_second)
+                   cannot overflow below */
+#if LONG_MAX > _PyTime_MAX / SEC_TO_NS
+                if ((_PyTime_t)freq > _PyTime_MAX / SEC_TO_NS) {
+                    PyErr_SetString(PyExc_OverflowError,
+                                    "_SC_CLK_TCK is too large");
+                    return -1;
+                }
+#endif
+
+                ticks_per_second = freq;
+            }
         }
+
         if (ticks_per_second != -1) {
             if (info) {
                 info->implementation = "times()";
@@ -1757,9 +1744,7 @@ init_timezone(PyObject *m)
      */
 #ifdef HAVE_DECL_TZNAME
     PyObject *otz0, *otz1;
-#if !defined(MS_WINDOWS) || defined(MS_WINDOWS_DESKTOP) || defined(MS_WINDOWS_SYSTEM)
     tzset();
-#endif
     PyModule_AddIntConstant(m, "timezone", _Py_timezone);
 #ifdef HAVE_ALTZONE
     PyModule_AddIntConstant(m, "altzone", altzone);

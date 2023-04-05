@@ -9,6 +9,7 @@
 #include "pycore_moduleobject.h"  // _PyModule_GetDef()
 #include "structmember.h"         // PyMemberDef
 
+static Py_ssize_t max_module_number;
 
 static PyMemberDef module_members[] = {
     {"__dict__", T_OBJECT, offsetof(PyModuleObject, md_dict), READONLY},
@@ -42,9 +43,10 @@ PyModuleDef_Init(PyModuleDef* def)
 {
     assert(PyModuleDef_Type.tp_flags & Py_TPFLAGS_READY);
     if (def->m_base.m_index == 0) {
+        max_module_number++;
         Py_SET_REFCNT(def, 1);
         Py_SET_TYPE(def, &PyModuleDef_Type);
-        def->m_base.m_index = _PyImport_GetNextModuleIndex();
+        def->m_base.m_index = max_module_number;
     }
     return (PyObject*)def;
 }
@@ -68,7 +70,8 @@ module_init_dict(PyModuleObject *mod, PyObject *md_dict,
     if (PyDict_SetItem(md_dict, &_Py_ID(__spec__), Py_None) != 0)
         return -1;
     if (PyUnicode_CheckExact(name)) {
-        Py_XSETREF(mod->md_name, Py_NewRef(name));
+        Py_INCREF(name);
+        Py_XSETREF(mod->md_name, name);
     }
 
     return 0;
@@ -208,7 +211,22 @@ _PyModule_CreateInitialized(PyModuleDef* module, int module_api_version)
             "module %s: PyModule_Create is incompatible with m_slots", name);
         return NULL;
     }
-    name = _PyImport_ResolveNameWithPackageContext(name);
+    /* Make sure name is fully qualified.
+
+       This is a bit of a hack: when the shared library is loaded,
+       the module name is "package.module", but the module calls
+       PyModule_Create*() with just "module" for the name.  The shared
+       library loader squirrels away the true name of the module in
+       _Py_PackageContext, and PyModule_Create*() will substitute this
+       (if the name actually matches).
+    */
+    if (_Py_PackageContext != NULL) {
+        const char *p = strrchr(_Py_PackageContext, '.');
+        if (p != NULL && strcmp(module->m_name, p+1) == 0) {
+            name = _Py_PackageContext;
+            _Py_PackageContext = NULL;
+        }
+    }
     if ((m = (PyModuleObject*)PyModule_New(name)) == NULL)
         return NULL;
 
@@ -273,27 +291,23 @@ PyModule_FromDefAndSpec2(PyModuleDef* def, PyObject *spec, int module_api_versio
     }
 
     for (cur_slot = def->m_slots; cur_slot && cur_slot->slot; cur_slot++) {
-        switch (cur_slot->slot) {
-            case Py_mod_create:
-                if (create) {
-                    PyErr_Format(
-                        PyExc_SystemError,
-                        "module %s has multiple create slots",
-                        name);
-                    goto error;
-                }
-                create = cur_slot->value;
-                break;
-            case Py_mod_exec:
-                has_execution_slots = 1;
-                break;
-            default:
-                assert(cur_slot->slot < 0 || cur_slot->slot > _Py_mod_LAST_SLOT);
+        if (cur_slot->slot == Py_mod_create) {
+            if (create) {
                 PyErr_Format(
                     PyExc_SystemError,
-                    "module %s uses unknown slot ID %i",
-                    name, cur_slot->slot);
+                    "module %s has multiple create slots",
+                    name);
                 goto error;
+            }
+            create = cur_slot->value;
+        } else if (cur_slot->slot < 0 || cur_slot->slot > _Py_mod_LAST_SLOT) {
+            PyErr_Format(
+                PyExc_SystemError,
+                "module %s uses unknown slot ID %i",
+                name, cur_slot->slot);
+            goto error;
+        } else {
+            has_execution_slots = 1;
         }
     }
 
@@ -309,10 +323,9 @@ PyModule_FromDefAndSpec2(PyModuleDef* def, PyObject *spec, int module_api_versio
             goto error;
         } else {
             if (PyErr_Occurred()) {
-                _PyErr_FormatFromCause(
-                    PyExc_SystemError,
-                    "creation of module %s raised unreported exception",
-                    name);
+                PyErr_Format(PyExc_SystemError,
+                            "creation of module %s raised unreported exception",
+                            name);
                 goto error;
             }
         }
@@ -414,7 +427,7 @@ PyModule_ExecDef(PyObject *module, PyModuleDef *def)
                     return -1;
                 }
                 if (PyErr_Occurred()) {
-                    _PyErr_FormatFromCause(
+                    PyErr_Format(
                         PyExc_SystemError,
                         "execution of module %s raised unreported exception",
                         name);
@@ -489,7 +502,8 @@ PyModule_GetNameObject(PyObject *m)
         }
         return NULL;
     }
-    return Py_NewRef(name);
+    Py_INCREF(name);
+    return name;
 }
 
 const char *
@@ -523,7 +537,8 @@ PyModule_GetFilenameObject(PyObject *m)
         }
         return NULL;
     }
-    return Py_NewRef(fileobj);
+    Py_INCREF(fileobj);
+    return fileobj;
 }
 
 const char *
@@ -692,7 +707,8 @@ static PyObject *
 module_repr(PyModuleObject *m)
 {
     PyInterpreterState *interp = _PyInterpreterState_GET();
-    return _PyImport_ImportlibModuleRepr(interp, (PyObject *)m);
+
+    return PyObject_CallMethod(interp->importlib, "_module_repr", "O", m);
 }
 
 /* Check if the "_initializing" attribute of the module spec is set to true.

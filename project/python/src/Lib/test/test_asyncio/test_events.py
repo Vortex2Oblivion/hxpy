@@ -4,7 +4,6 @@ import collections.abc
 import concurrent.futures
 import functools
 import io
-import multiprocessing
 import os
 import platform
 import re
@@ -23,13 +22,14 @@ import errno
 import unittest
 from unittest import mock
 import weakref
-import warnings
+
 if sys.platform not in ('win32', 'vxworks'):
     import tty
 
 import asyncio
 from asyncio import coroutines
 from asyncio import events
+from asyncio import proactor_events
 from asyncio import selector_events
 from test.test_asyncio import utils as test_utils
 from test import support
@@ -864,29 +864,6 @@ class EventLoopTestsMixin:
 
         # close server
         server.close()
-
-    def test_create_server_trsock(self):
-        proto = MyProto(self.loop)
-        f = self.loop.create_server(lambda: proto, '0.0.0.0', 0)
-        server = self.loop.run_until_complete(f)
-        self.assertEqual(len(server.sockets), 1)
-        sock = server.sockets[0]
-        self.assertIsInstance(sock, asyncio.trsock.TransportSocket)
-        host, port = sock.getsockname()
-        self.assertEqual(host, '0.0.0.0')
-        dup = sock.dup()
-        self.addCleanup(dup.close)
-        self.assertIsInstance(dup, socket.socket)
-        self.assertFalse(sock.get_inheritable())
-        with self.assertRaises(ValueError):
-            sock.settimeout(1)
-        sock.settimeout(0)
-        self.assertEqual(sock.gettimeout(), 0)
-        with self.assertRaises(ValueError):
-            sock.setblocking(True)
-        sock.setblocking(False)
-        server.close()
-
 
     @unittest.skipUnless(hasattr(socket, 'SO_REUSEPORT'), 'No SO_REUSEPORT')
     def test_create_server_reuse_port(self):
@@ -2120,16 +2097,12 @@ else:
     class UnixEventLoopTestsMixin(EventLoopTestsMixin):
         def setUp(self):
             super().setUp()
-            with warnings.catch_warnings():
-                warnings.simplefilter('ignore', DeprecationWarning)
-                watcher = asyncio.SafeChildWatcher()
-                watcher.attach_loop(self.loop)
-                asyncio.set_child_watcher(watcher)
+            watcher = asyncio.SafeChildWatcher()
+            watcher.attach_loop(self.loop)
+            asyncio.set_child_watcher(watcher)
 
         def tearDown(self):
-            with warnings.catch_warnings():
-                warnings.simplefilter('ignore', DeprecationWarning)
-                asyncio.set_child_watcher(None)
+            asyncio.set_child_watcher(None)
             super().tearDown()
 
 
@@ -2615,9 +2588,7 @@ class PolicyTests(unittest.TestCase):
     def test_get_event_loop(self):
         policy = asyncio.DefaultEventLoopPolicy()
         self.assertIsNone(policy._local._loop)
-        with self.assertWarns(DeprecationWarning) as cm:
-            loop = policy.get_event_loop()
-        self.assertEqual(cm.filename, __file__)
+        loop = policy.get_event_loop()
         self.assertIsInstance(loop, asyncio.AbstractEventLoop)
 
         self.assertIs(policy._local._loop, loop)
@@ -2631,10 +2602,8 @@ class PolicyTests(unittest.TestCase):
                 policy, "set_event_loop",
                 wraps=policy.set_event_loop) as m_set_event_loop:
 
-            with self.assertWarns(DeprecationWarning) as cm:
-                loop = policy.get_event_loop()
+            loop = policy.get_event_loop()
             self.addCleanup(loop.close)
-            self.assertEqual(cm.filename, __file__)
 
             # policy._local._loop must be set through .set_event_loop()
             # (the unix DefaultEventLoopPolicy needs this call to attach
@@ -2726,18 +2695,14 @@ class GetEventLoopTestsMixin:
         asyncio.set_event_loop(self.loop)
 
         if sys.platform != 'win32':
-            with warnings.catch_warnings():
-                warnings.simplefilter('ignore', DeprecationWarning)
-                watcher = asyncio.SafeChildWatcher()
-                watcher.attach_loop(self.loop)
-                asyncio.set_child_watcher(watcher)
+            watcher = asyncio.SafeChildWatcher()
+            watcher.attach_loop(self.loop)
+            asyncio.set_child_watcher(watcher)
 
     def tearDown(self):
         try:
             if sys.platform != 'win32':
-                with warnings.catch_warnings():
-                    warnings.simplefilter('ignore', DeprecationWarning)
-                    asyncio.set_child_watcher(None)
+                asyncio.set_child_watcher(None)
 
             super().tearDown()
         finally:
@@ -2763,13 +2728,7 @@ class GetEventLoopTestsMixin:
             support.skip_if_broken_multiprocessing_synchronize()
 
             async def main():
-                if multiprocessing.get_start_method() == 'fork':
-                    # Avoid 'fork' DeprecationWarning.
-                    mp_context = multiprocessing.get_context('forkserver')
-                else:
-                    mp_context = None
-                pool = concurrent.futures.ProcessPoolExecutor(
-                        mp_context=mp_context)
+                pool = concurrent.futures.ProcessPoolExecutor()
                 result = await self.loop.run_in_executor(
                     pool, _test_get_event_loop_new_process__sub_proc)
                 pool.shutdown()
@@ -2833,10 +2792,8 @@ class GetEventLoopTestsMixin:
             loop = asyncio.new_event_loop()
             self.addCleanup(loop.close)
 
-            with self.assertWarns(DeprecationWarning) as cm:
-                loop2 = asyncio.get_event_loop()
+            loop2 = asyncio.get_event_loop()
             self.addCleanup(loop2.close)
-            self.assertEqual(cm.filename, __file__)
             asyncio.set_event_loop(None)
             with self.assertRaisesRegex(RuntimeError, 'no current'):
                 asyncio.get_event_loop()

@@ -188,6 +188,19 @@ class Element:
         """
         return self.__class__(tag, attrib)
 
+    def copy(self):
+        """Return copy of current element.
+
+        This creates a shallow copy. Subelements will be shared with the
+        original tree.
+
+        """
+        warnings.warn(
+            "elem.copy() is deprecated. Use copy.copy(elem) instead.",
+            DeprecationWarning
+            )
+        return self.__copy__()
+
     def __copy__(self):
         elem = self.makeelement(self.tag, self.attrib)
         elem.text = self.text
@@ -200,10 +213,9 @@ class Element:
 
     def __bool__(self):
         warnings.warn(
-            "Testing an element's truth value will raise an exception in "
-            "future versions.  "
+            "The behavior of this method will change in future versions.  "
             "Use specific 'len(elem)' or 'elem is not None' test instead.",
-            DeprecationWarning, stacklevel=2
+            FutureWarning, stacklevel=2
             )
         return len(self._children) != 0 # emulate old behaviour, for now
 
@@ -567,7 +579,10 @@ class ElementTree:
                     # it with chunks.
                     self._root = parser._parse_whole(source)
                     return self._root
-            while data := source.read(65536):
+            while True:
+                data = source.read(65536)
+                if not data:
+                    break
                 parser.feed(data)
             self._root = parser.close()
             return self._root

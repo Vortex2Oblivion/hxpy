@@ -794,12 +794,9 @@ handle_weakrefs(PyGC_Head *unreachable, PyGC_Head *old)
         if (! _PyType_SUPPORTS_WEAKREFS(Py_TYPE(op)))
             continue;
 
-        /* It supports weakrefs.  Does it have any?
-         *
-         * This is never triggered for static types so we can avoid the
-         * (slightly) more costly _PyObject_GET_WEAKREFS_LISTPTR().
-         */
-        wrlist = _PyObject_GET_WEAKREFS_LISTPTR_FROM_OFFSET(op);
+        /* It supports weakrefs.  Does it have any? */
+        wrlist = (PyWeakReference **)
+                                _PyObject_GET_WEAKREFS_LISTPTR(op);
 
         /* `op` may have some weakrefs.  March over the list, clear
          * all the weakrefs, and move the weakrefs with callbacks
@@ -1870,7 +1867,8 @@ gc_is_tracked(PyObject *module, PyObject *obj)
         result = Py_True;
     else
         result = Py_False;
-    return Py_NewRef(result);
+    Py_INCREF(result);
+    return result;
 }
 
 /*[clinic input]
@@ -2082,10 +2080,11 @@ PyGC_Collect(void)
         n = 0;
     }
     else {
+        PyObject *exc, *value, *tb;
         gcstate->collecting = 1;
-        PyObject *exc = _PyErr_GetRaisedException(tstate);
+        _PyErr_Fetch(tstate, &exc, &value, &tb);
         n = gc_collect_with_callback(tstate, NUM_GENERATIONS - 1);
-        _PyErr_SetRaisedException(tstate, exc);
+        _PyErr_Restore(tstate, exc, value, tb);
         gcstate->collecting = 0;
     }
 
@@ -2251,20 +2250,6 @@ PyObject_IS_GC(PyObject *obj)
 }
 
 void
-_Py_ScheduleGC(PyInterpreterState *interp)
-{
-    GCState *gcstate = &interp->gc;
-    if (gcstate->collecting == 1) {
-        return;
-    }
-    struct _ceval_state *ceval = &interp->ceval;
-    if (!_Py_atomic_load_relaxed(&ceval->gc_scheduled)) {
-        _Py_atomic_store_relaxed(&ceval->gc_scheduled, 1);
-        _Py_atomic_store_relaxed(&ceval->eval_breaker, 1);
-    }
-}
-
-void
 _PyObject_GC_Link(PyObject *op)
 {
     PyGC_Head *g = AS_GC(op);
@@ -2281,17 +2266,10 @@ _PyObject_GC_Link(PyObject *op)
         !gcstate->collecting &&
         !_PyErr_Occurred(tstate))
     {
-        _Py_ScheduleGC(tstate->interp);
+        gcstate->collecting = 1;
+        gc_collect_generations(tstate);
+        gcstate->collecting = 0;
     }
-}
-
-void
-_Py_RunGC(PyThreadState *tstate)
-{
-    GCState *gcstate = &tstate->interp->gc;
-    gcstate->collecting = 1;
-    gc_collect_generations(tstate);
-    gcstate->collecting = 0;
 }
 
 static PyObject *
@@ -2328,6 +2306,7 @@ _PyObject_GC_New(PyTypeObject *tp)
 PyVarObject *
 _PyObject_GC_NewVar(PyTypeObject *tp, Py_ssize_t nitems)
 {
+    size_t size;
     PyVarObject *op;
 
     if (nitems < 0) {
@@ -2335,7 +2314,7 @@ _PyObject_GC_NewVar(PyTypeObject *tp, Py_ssize_t nitems)
         return NULL;
     }
     size_t presize = _PyType_PreHeaderSize(tp);
-    size_t size = _PyObject_VAR_SIZE(tp, nitems);
+    size = _PyObject_VAR_SIZE(tp, nitems);
     op = (PyVarObject *)gc_alloc(size, presize);
     if (op == NULL) {
         return NULL;
@@ -2349,7 +2328,7 @@ _PyObject_GC_Resize(PyVarObject *op, Py_ssize_t nitems)
 {
     const size_t basicsize = _PyObject_VAR_SIZE(Py_TYPE(op), nitems);
     _PyObject_ASSERT((PyObject *)op, !_PyObject_GC_IS_TRACKED(op));
-    if (basicsize > (size_t)PY_SSIZE_T_MAX - sizeof(PyGC_Head)) {
+    if (basicsize > PY_SSIZE_T_MAX - sizeof(PyGC_Head)) {
         return (PyVarObject *)PyErr_NoMemory();
     }
 
@@ -2400,28 +2379,4 @@ PyObject_GC_IsFinalized(PyObject *obj)
          return 1;
     }
     return 0;
-}
-
-void
-PyUnstable_GC_VisitObjects(gcvisitobjects_t callback, void *arg)
-{
-    size_t i;
-    GCState *gcstate = get_gc_state();
-    int origenstate = gcstate->enabled;
-    gcstate->enabled = 0;
-    for (i = 0; i < NUM_GENERATIONS; i++) {
-        PyGC_Head *gc_list, *gc;
-        gc_list = GEN_HEAD(gcstate, i);
-        for (gc = GC_NEXT(gc_list); gc != gc_list; gc = GC_NEXT(gc)) {
-            PyObject *op = FROM_GC(gc);
-            Py_INCREF(op);
-            int res = callback(op, arg);
-            Py_DECREF(op);
-            if (!res) {
-                goto done;
-            }
-        }
-    }
-done:
-    gcstate->enabled = origenstate;
 }

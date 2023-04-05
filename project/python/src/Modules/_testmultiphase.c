@@ -57,7 +57,8 @@ Example_demo(ExampleObject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "|O:demo", &o))
         return NULL;
     if (o != NULL && PyUnicode_Check(o)) {
-        return Py_NewRef(o);
+        Py_INCREF(o);
+        return o;
     }
     Py_RETURN_NONE;
 }
@@ -76,7 +77,8 @@ Example_getattro(ExampleObject *self, PyObject *name)
     if (self->x_attr != NULL) {
         PyObject *v = PyDict_GetItemWithError(self->x_attr, name);
         if (v != NULL) {
-            return Py_NewRef(v);
+            Py_INCREF(v);
+            return v;
         }
         else if (PyErr_Occurred()) {
             return NULL;
@@ -149,7 +151,8 @@ _testmultiphase_StateAccessType_get_defining_module_impl(StateAccessTypeObject *
         return NULL;
     }
     assert(PyType_GetModuleByDef(Py_TYPE(self), &def_meth_state_access) == retval);
-    return Py_NewRef(retval);
+    Py_INCREF(retval);
+    return retval;
 }
 
 /*[clinic input]

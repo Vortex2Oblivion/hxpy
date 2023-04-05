@@ -28,7 +28,6 @@ socket.getdefaulttimeout() -- get the default timeout value
 socket.setdefaulttimeout() -- set the default timeout value
 create_connection() -- connects to an address, with an optional timeout and
                        optional source address.
-create_server() -- create a TCP socket and bind it to a specified address.
 
  [*] not available on all platforms!
 
@@ -910,7 +909,7 @@ def create_server(address, *, family=AF_INET, backlog=None, reuse_port=False,
         # address, effectively preventing this one from accepting
         # connections. Also, it may set the process in a state where
         # it'll no longer respond to any signals or graceful kills.
-        # See: https://learn.microsoft.com/windows/win32/winsock/using-so-reuseaddr-and-so-exclusiveaddruse
+        # See: msdn2.microsoft.com/en-us/library/ms740621(VS.85).aspx
         if os.name not in ('nt', 'cygwin') and \
                 hasattr(_socket, 'SO_REUSEADDR'):
             try:

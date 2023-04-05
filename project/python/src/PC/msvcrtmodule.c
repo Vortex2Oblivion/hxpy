@@ -38,14 +38,6 @@ class HANDLE_converter(CConverter):
     type = 'void *'
     format_unit = '"_Py_PARSE_UINTPTR"'
 
-    def parse_arg(self, argname, displayname):
-        return """
-            {paramname} = PyLong_AsVoidPtr({argname});
-            if (!{paramname} && PyErr_Occurred()) {{{{
-                goto exit;
-            }}}}
-            """.format(argname=argname, paramname=self.parser_name)
-
 class HANDLE_return_converter(CReturnConverter):
     type = 'void *'
 
@@ -74,7 +66,7 @@ class wchar_t_return_converter(CReturnConverter):
         data.return_conversion.append(
             'return_value = PyUnicode_FromOrdinal(_return_value);\n')
 [python start generated code]*/
-/*[python end generated code: output=da39a3ee5e6b4b0d input=1e8e9fa3538ec08f]*/
+/*[python end generated code: output=da39a3ee5e6b4b0d input=d102511df3cda2eb]*/
 
 /*[clinic input]
 module msvcrt
@@ -253,8 +245,6 @@ msvcrt_getch_impl(PyObject *module)
     return ch;
 }
 
-#ifdef MS_WINDOWS_DESKTOP
-
 /*[clinic input]
 msvcrt.getwch -> wchar_t
 
@@ -272,8 +262,6 @@ msvcrt_getwch_impl(PyObject *module)
     Py_END_ALLOW_THREADS
     return ch;
 }
-
-#endif /* MS_WINDOWS_DESKTOP */
 
 /*[clinic input]
 msvcrt.getche -> byte_char
@@ -293,8 +281,6 @@ msvcrt_getche_impl(PyObject *module)
     return ch;
 }
 
-#ifdef MS_WINDOWS_DESKTOP
-
 /*[clinic input]
 msvcrt.getwche -> wchar_t
 
@@ -312,8 +298,6 @@ msvcrt_getwche_impl(PyObject *module)
     Py_END_ALLOW_THREADS
     return ch;
 }
-
-#endif /* MS_WINDOWS_DESKTOP */
 
 /*[clinic input]
 msvcrt.putch
@@ -334,8 +318,6 @@ msvcrt_putch_impl(PyObject *module, char char_value)
     Py_RETURN_NONE;
 }
 
-#ifdef MS_WINDOWS_DESKTOP
-
 /*[clinic input]
 msvcrt.putwch
 
@@ -355,8 +337,6 @@ msvcrt_putwch_impl(PyObject *module, int unicode_char)
     Py_RETURN_NONE;
 
 }
-
-#endif /* MS_WINDOWS_DESKTOP */
 
 /*[clinic input]
 msvcrt.ungetch
@@ -386,8 +366,6 @@ msvcrt_ungetch_impl(PyObject *module, char char_value)
     Py_RETURN_NONE;
 }
 
-#ifdef MS_WINDOWS_DESKTOP
-
 /*[clinic input]
 msvcrt.ungetwch
 
@@ -411,8 +389,6 @@ msvcrt_ungetwch_impl(PyObject *module, int unicode_char)
         return PyErr_SetFromErrno(PyExc_OSError);
     Py_RETURN_NONE;
 }
-
-#endif /* MS_WINDOWS_DESKTOP */
 
 #ifdef _DEBUG
 /*[clinic input]
@@ -491,8 +467,6 @@ msvcrt_set_error_mode_impl(PyObject *module, int mode)
 }
 #endif /* _DEBUG */
 
-#if defined(MS_WINDOWS_DESKTOP) || defined(MS_WINDOWS_APP) || defined(MS_WINDOWS_SYSTEM)
-
 /*[clinic input]
 msvcrt.GetErrorMode
 
@@ -511,8 +485,6 @@ msvcrt_GetErrorMode_impl(PyObject *module)
 
     return PyLong_FromUnsignedLong(res);
 }
-
-#endif /* MS_WINDOWS_APP || MS_WINDOWS_SYSTEM */
 
 /*[clinic input]
 msvcrt.SetErrorMode
@@ -621,12 +593,10 @@ PyInit_msvcrt(void)
     insertint(d, "LK_NBRLCK", _LK_NBRLCK);
     insertint(d, "LK_RLCK", _LK_RLCK);
     insertint(d, "LK_UNLCK", _LK_UNLCK);
-#ifdef MS_WINDOWS_DESKTOP
     insertint(d, "SEM_FAILCRITICALERRORS", SEM_FAILCRITICALERRORS);
     insertint(d, "SEM_NOALIGNMENTFAULTEXCEPT", SEM_NOALIGNMENTFAULTEXCEPT);
     insertint(d, "SEM_NOGPFAULTERRORBOX", SEM_NOGPFAULTERRORBOX);
     insertint(d, "SEM_NOOPENFILEERRORBOX", SEM_NOOPENFILEERRORBOX);
-#endif
 #ifdef _DEBUG
     insertint(d, "CRT_WARN", _CRT_WARN);
     insertint(d, "CRT_ERROR", _CRT_ERROR);

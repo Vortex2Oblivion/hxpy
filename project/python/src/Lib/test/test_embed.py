@@ -2,7 +2,6 @@
 from test import support
 from test.support import import_helper
 from test.support import os_helper
-from test.support import requires_specialization
 import unittest
 
 from collections import namedtuple
@@ -23,6 +22,7 @@ if not support.has_subprocess_support:
 
 MS_WINDOWS = (os.name == 'nt')
 MACOS = (sys.platform == 'darwin')
+Py_DEBUG = hasattr(sys, 'gettotalrefcount')
 PYMEM_ALLOCATOR_NOT_SET = 0
 PYMEM_ALLOCATOR_DEBUG = 2
 PYMEM_ALLOCATOR_MALLOC = 3
@@ -347,38 +347,33 @@ class EmbeddingTests(EmbeddingTestsMixin, unittest.TestCase):
         out, err = self.run_embedded_interpreter("test_repeated_simple_init")
         self.assertEqual(out, 'Finalized\n' * INIT_LOOPS)
 
-    @requires_specialization
-    def test_specialized_static_code_gets_unspecialized_at_Py_FINALIZE(self):
+    def test_quickened_static_code_gets_unquickened_at_Py_FINALIZE(self):
         # https://github.com/python/cpython/issues/92031
 
-        code = textwrap.dedent("""\
-            import dis
+        # Do these imports outside of the code string to avoid using
+        # importlib too much from within the code string, so that
+        # _handle_fromlist doesn't get quickened until we intend it to.
+        from dis import _all_opmap
+        resume = _all_opmap["RESUME"]
+        resume_quick = _all_opmap["RESUME_QUICK"]
+        from test.test_dis import QUICKENING_WARMUP_DELAY
+
+        code = textwrap.dedent(f"""\
             import importlib._bootstrap
-            import opcode
-            import test.test_dis
-
-            def is_specialized(f):
-                for instruction in dis.get_instructions(f, adaptive=True):
-                    opname = instruction.opname
-                    if (
-                        opname in opcode._specialized_instructions
-                        # Exclude superinstructions:
-                        and "__" not in opname
-                    ):
-                        return True
-                return False
-
             func = importlib._bootstrap._handle_fromlist
+            code = func.__code__
 
-            # "copy" the code to un-specialize it:
-            func.__code__ = func.__code__.replace()
+            # Assert initially unquickened.
+            # Use sets to account for byte order.
+            if set(code._co_code_adaptive[:2]) != set([{resume}, 0]):
+                raise AssertionError()
 
-            assert not is_specialized(func), "specialized instructions found"
-
-            for i in range(test.test_dis.ADAPTIVE_WARMUP_DELAY):
+            for i in range({QUICKENING_WARMUP_DELAY}):
                 func(importlib._bootstrap, ["x"], lambda *args: None)
 
-            assert is_specialized(func), "no specialized instructions found"
+            # Assert quickening worked
+            if set(code._co_code_adaptive[:2]) != set([{resume_quick}, 0]):
+                raise AssertionError()
 
             print("Tests passed")
         """)
@@ -446,10 +441,8 @@ class InitConfigTests(EmbeddingTestsMixin, unittest.TestCase):
         'install_signal_handlers': 1,
         'use_hash_seed': 0,
         'hash_seed': 0,
-        'int_max_str_digits': sys.int_info.default_max_str_digits,
         'faulthandler': 0,
         'tracemalloc': 0,
-        'perf_profiling': 0,
         'import_time': 0,
         'code_debug_ranges': 1,
         'show_ref_count': 0,
@@ -508,7 +501,8 @@ class InitConfigTests(EmbeddingTestsMixin, unittest.TestCase):
         'check_hash_pycs_mode': 'default',
         'pathconfig_warnings': 1,
         '_init_main': 1,
-        'use_frozen_modules': not support.Py_DEBUG,
+        '_isolated_interpreter': 0,
+        'use_frozen_modules': not Py_DEBUG,
         'safe_path': 0,
         '_is_python_build': IGNORE_CONFIG,
     }
@@ -533,7 +527,6 @@ class InitConfigTests(EmbeddingTestsMixin, unittest.TestCase):
         use_hash_seed=0,
         faulthandler=0,
         tracemalloc=0,
-        perf_profiling=0,
         pathconfig_warnings=0,
     )
     if MS_WINDOWS:
@@ -844,7 +837,6 @@ class InitConfigTests(EmbeddingTestsMixin, unittest.TestCase):
             'use_hash_seed': 1,
             'hash_seed': 123,
             'tracemalloc': 2,
-            'perf_profiling': 0,
             'import_time': 1,
             'code_debug_ranges': 0,
             'show_ref_count': 1,
@@ -890,10 +882,11 @@ class InitConfigTests(EmbeddingTestsMixin, unittest.TestCase):
             'platlibdir': 'my_platlibdir',
             'module_search_paths': self.IGNORE_CONFIG,
             'safe_path': 1,
-            'int_max_str_digits': 31337,
 
             'check_hash_pycs_mode': 'always',
             'pathconfig_warnings': 0,
+
+            '_isolated_interpreter': 1,
         }
         self.check_all_configs("test_init_from_config", config, preconfig,
                                api=API_COMPAT)
@@ -906,7 +899,6 @@ class InitConfigTests(EmbeddingTestsMixin, unittest.TestCase):
             'use_hash_seed': 1,
             'hash_seed': 42,
             'tracemalloc': 2,
-            'perf_profiling': 0,
             'import_time': 1,
             'code_debug_ranges': 0,
             'malloc_stats': 1,
@@ -925,7 +917,6 @@ class InitConfigTests(EmbeddingTestsMixin, unittest.TestCase):
             'platlibdir': 'env_platlibdir',
             'module_search_paths': self.IGNORE_CONFIG,
             'safe_path': 1,
-            'int_max_str_digits': 4567,
         }
         self.check_all_configs("test_init_compat_env", config, preconfig,
                                api=API_COMPAT)
@@ -939,7 +930,6 @@ class InitConfigTests(EmbeddingTestsMixin, unittest.TestCase):
             'use_hash_seed': 1,
             'hash_seed': 42,
             'tracemalloc': 2,
-            'perf_profiling': 0,
             'import_time': 1,
             'code_debug_ranges': 0,
             'malloc_stats': 1,
@@ -958,7 +948,6 @@ class InitConfigTests(EmbeddingTestsMixin, unittest.TestCase):
             'platlibdir': 'env_platlibdir',
             'module_search_paths': self.IGNORE_CONFIG,
             'safe_path': 1,
-            'int_max_str_digits': 4567,
         }
         self.check_all_configs("test_init_python_env", config, preconfig,
                                api=API_PYTHON)
@@ -1219,7 +1208,7 @@ class InitConfigTests(EmbeddingTestsMixin, unittest.TestCase):
              # The current getpath.c doesn't determine the stdlib dir
              # in this case.
             'stdlib_dir': '',
-            'use_frozen_modules': not support.Py_DEBUG,
+            'use_frozen_modules': not Py_DEBUG,
             # overridden by PyConfig
             'program_name': 'conf_program_name',
             'base_executable': 'conf_executable',
@@ -1513,12 +1502,12 @@ class InitConfigTests(EmbeddingTestsMixin, unittest.TestCase):
                 config['base_prefix'] = pyvenv_home
                 config['prefix'] = pyvenv_home
                 config['stdlib_dir'] = os.path.join(pyvenv_home, 'Lib')
-                config['use_frozen_modules'] = int(not support.Py_DEBUG)
+                config['use_frozen_modules'] = int(not Py_DEBUG)
             else:
                 # cannot reliably assume stdlib_dir here because it
                 # depends too much on our build. But it ought to be found
                 config['stdlib_dir'] = self.IGNORE_CONFIG
-                config['use_frozen_modules'] = int(not support.Py_DEBUG)
+                config['use_frozen_modules'] = int(not Py_DEBUG)
 
             env = self.copy_paths_by_env(config)
             self.check_all_configs("test_init_compat_config", config,
@@ -1655,28 +1644,6 @@ class InitConfigTests(EmbeddingTestsMixin, unittest.TestCase):
                 self.check_all_configs("test_init_use_frozen_modules", config,
                                        api=API_PYTHON, env=env)
 
-    def test_init_main_interpreter_settings(self):
-        EXTENSIONS = 1<<8
-        THREADS = 1<<10
-        DAEMON_THREADS = 1<<11
-        FORK = 1<<15
-        EXEC = 1<<16
-        expected = {
-            # All optional features should be enabled.
-            'feature_flags':
-                FORK | EXEC | THREADS | DAEMON_THREADS,
-        }
-        out, err = self.run_embedded_interpreter(
-            'test_init_main_interpreter_settings',
-        )
-        self.assertEqual(err, '')
-        try:
-            out = json.loads(out)
-        except json.JSONDecodeError:
-            self.fail(f'fail to decode stdout: {out!r}')
-
-        self.assertEqual(out, expected)
-
 
 class SetConfigTests(unittest.TestCase):
     def test_set_config(self):
@@ -1773,7 +1740,7 @@ class MiscTests(EmbeddingTestsMixin, unittest.TestCase):
         """).lstrip()
         self.assertEqual(out, expected)
 
-    @unittest.skipUnless(support.Py_DEBUG,
+    @unittest.skipUnless(hasattr(sys, 'gettotalrefcount'),
                          '-X showrefcount requires a Python debug build')
     def test_no_memleak(self):
         # bpo-1635741: Python must release all memory at exit

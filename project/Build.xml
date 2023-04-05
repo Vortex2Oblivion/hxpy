@@ -209,8 +209,14 @@
 		<file name="${haxelib:hxpy}/project/python/src/PC/pyconfig.h" />
 	</files>
 
+	<target id="haxe" tool='linker'>
+		<lib name="${haxelib:hxpy}/libs/python3.lib" />
+		<lib name="${haxelib:hxpy}/libs/python311.lib" />
+	</target>
+
 	<files id="haxe">
 		<compilervalue name="-I" value="${haxelib:hxpy}/project/python/src/Include/" />
 		<compilervalue name="-I" value="${haxelib:hxpy}/project/python/src/PC/" />
+		<compilervalue name="-I" value="${haxelib:hxpy}/libs" />
 	</files>
 </xml>

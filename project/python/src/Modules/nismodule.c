@@ -458,7 +458,8 @@ nis_maps (PyObject *module, PyObject *args, PyObject *kwdict)
         if (!str || PyList_Append(list, str) < 0)
         {
             Py_XDECREF(str);
-            Py_SETREF(list, NULL);
+            Py_DECREF(list);
+            list = NULL;
             break;
         }
         Py_DECREF(str);

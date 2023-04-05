@@ -2,12 +2,11 @@
 
 import time
 import _xxsubinterpreters as _interpreters
-import _xxinterpchannels as _channels
 
 # aliases:
-from _xxsubinterpreters import is_shareable
-from _xxinterpchannels import (
+from _xxsubinterpreters import (
     ChannelError, ChannelNotFoundError, ChannelEmptyError,
+    is_shareable,
 )
 
 
@@ -103,7 +102,7 @@ def create_channel():
 
     The channel may be used to pass data safely between interpreters.
     """
-    cid = _channels.create()
+    cid = _interpreters.channel_create()
     recv, send = RecvChannel(cid), SendChannel(cid)
     return recv, send
 
@@ -111,14 +110,14 @@ def create_channel():
 def list_all_channels():
     """Return a list of (recv, send) for all open channels."""
     return [(RecvChannel(cid), SendChannel(cid))
-            for cid in _channels.list_all()]
+            for cid in _interpreters.channel_list_all()]
 
 
 class _ChannelEnd:
     """The base class for RecvChannel and SendChannel."""
 
     def __init__(self, id):
-        if not isinstance(id, (int, _channels.ChannelID)):
+        if not isinstance(id, (int, _interpreters.ChannelID)):
             raise TypeError(f'id must be an int, got {id!r}')
         self._id = id
 
@@ -153,10 +152,10 @@ class RecvChannel(_ChannelEnd):
         This blocks until an object has been sent, if none have been
         sent already.
         """
-        obj = _channels.recv(self._id, _sentinel)
+        obj = _interpreters.channel_recv(self._id, _sentinel)
         while obj is _sentinel:
             time.sleep(_delay)
-            obj = _channels.recv(self._id, _sentinel)
+            obj = _interpreters.channel_recv(self._id, _sentinel)
         return obj
 
     def recv_nowait(self, default=_NOT_SET):
@@ -167,9 +166,9 @@ class RecvChannel(_ChannelEnd):
         is the same as recv().
         """
         if default is _NOT_SET:
-            return _channels.recv(self._id)
+            return _interpreters.channel_recv(self._id)
         else:
-            return _channels.recv(self._id, default)
+            return _interpreters.channel_recv(self._id, default)
 
 
 class SendChannel(_ChannelEnd):
@@ -180,7 +179,7 @@ class SendChannel(_ChannelEnd):
 
         This blocks until the object is received.
         """
-        _channels.send(self._id, obj)
+        _interpreters.channel_send(self._id, obj)
         # XXX We are missing a low-level channel_send_wait().
         # See bpo-32604 and gh-19829.
         # Until that shows up we fake it:
@@ -195,4 +194,4 @@ class SendChannel(_ChannelEnd):
         # XXX Note that at the moment channel_send() only ever returns
         # None.  This should be fixed when channel_send_wait() is added.
         # See bpo-32604 and gh-19829.
-        return _channels.send(self._id, obj)
+        return _interpreters.channel_send(self._id, obj)

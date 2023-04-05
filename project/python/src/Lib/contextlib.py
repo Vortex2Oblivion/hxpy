@@ -152,7 +152,7 @@ class _GeneratorContextManager(
                 # tell if we get the same exception back
                 value = typ()
             try:
-                self.gen.throw(value)
+                self.gen.throw(typ, value, traceback)
             except StopIteration as exc:
                 # Suppress StopIteration *unless* it's the same exception that
                 # was passed to throw().  This prevents a StopIteration
@@ -219,7 +219,7 @@ class _AsyncGeneratorContextManager(
                 # tell if we get the same exception back
                 value = typ()
             try:
-                await self.gen.athrow(value)
+                await self.gen.athrow(typ, value, traceback)
             except StopAsyncIteration as exc:
                 # Suppress StopIteration *unless* it's the same exception that
                 # was passed to throw().  This prevents a StopIteration

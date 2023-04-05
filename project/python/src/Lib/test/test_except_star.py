@@ -208,38 +208,44 @@ class ExceptStarTest(unittest.TestCase):
 
 class TestExceptStarSplitSemantics(ExceptStarTest):
     def doSplitTestNamed(self, exc, T, match_template, rest_template):
-        initial_sys_exception = sys.exception()
-        sys_exception = match = rest = None
+        initial_exc_info = sys.exc_info()
+        exc_info = match = rest = None
         try:
             try:
                 raise exc
             except* T as e:
-                sys_exception = sys.exception()
+                exc_info = sys.exc_info()
                 match = e
         except BaseException as e:
             rest = e
 
-        self.assertEqual(sys_exception, match)
+        if match_template:
+            self.assertEqual(exc_info[1], match)
+        else:
+            self.assertIsNone(exc_info)
         self.assertExceptionIsLike(match, match_template)
         self.assertExceptionIsLike(rest, rest_template)
-        self.assertEqual(sys.exception(), initial_sys_exception)
+        self.assertEqual(sys.exc_info(), initial_exc_info)
 
     def doSplitTestUnnamed(self, exc, T, match_template, rest_template):
-        initial_sys_exception = sys.exception()
-        sys_exception = match = rest = None
+        initial_exc_info = sys.exc_info()
+        exc_info = match = rest = None
         try:
             try:
                 raise exc
             except* T:
-                sys_exception = match = sys.exception()
+                exc_info = sys.exc_info()
+                match = sys.exc_info()[1]
             else:
                 if rest_template:
                     self.fail("Exception not raised")
         except BaseException as e:
             rest = e
         self.assertExceptionIsLike(match, match_template)
+        if match_template:
+            self.assertEqual(exc_info[0], type(match_template))
         self.assertExceptionIsLike(rest, rest_template)
-        self.assertEqual(sys.exception(), initial_sys_exception)
+        self.assertEqual(sys.exc_info(), initial_exc_info)
 
     def doSplitTestInExceptHandler(self, exc, T, match_template, rest_template):
         try:
@@ -403,11 +409,11 @@ class TestExceptStarSplitSemantics(ExceptStarTest):
         try:
             raise ExceptionGroup("mmu", [OSError("os"), BlockingIOError("io")])
         except* BlockingIOError:
-            e = sys.exception()
+            e = sys.exc_info()[1]
             self.assertExceptionIsLike(e,
                 ExceptionGroup("mmu", [BlockingIOError("io")]))
         except* OSError:
-            e = sys.exception()
+            e = sys.exc_info()[1]
             self.assertExceptionIsLike(e,
                 ExceptionGroup("mmu", [OSError("os")]))
         else:
@@ -428,7 +434,7 @@ class TestExceptStarSplitSemantics(ExceptStarTest):
         try:
             raise ExceptionGroup("fstu", [BlockingIOError("io")])
         except* OSError:
-            e = sys.exception()
+            e = sys.exc_info()[1]
             self.assertExceptionIsLike(e,
                 ExceptionGroup("fstu", [BlockingIOError("io")]))
         except* BlockingIOError:
@@ -446,7 +452,7 @@ class TestExceptStarSplitSemantics(ExceptStarTest):
                 pass
             else:
                 self.fail("Exception not raised")
-            e = sys.exception()
+            e = sys.exc_info()[1]
             self.assertExceptionIsLike(e,
                  ExceptionGroup("n", [BlockingIOError("io")]))
         else:
@@ -760,7 +766,7 @@ class TestExceptStarRaiseFrom(ExceptStarTest):
             try:
                 raise orig
             except* OSError:
-                e = sys.exception()
+                e = sys.exc_info()[1]
                 raise TypeError(3) from e
         except ExceptionGroup as e:
             exc = e
@@ -815,7 +821,7 @@ class TestExceptStarRaiseFrom(ExceptStarTest):
             try:
                 raise orig
             except* (TypeError, ValueError) as e:
-                e = sys.exception()
+                e = sys.exc_info()[1]
                 raise SyntaxError(3) from e
         except ExceptionGroup as e:
             exc = e
@@ -876,10 +882,10 @@ class TestExceptStarRaiseFrom(ExceptStarTest):
             try:
                 raise orig
             except* TypeError:
-                e = sys.exception()
+                e = sys.exc_info()[1]
                 raise SyntaxError(3) from e
             except* ValueError:
-                e = sys.exception()
+                e = sys.exc_info()[1]
                 raise SyntaxError(4) from e
         except ExceptionGroup as e:
             exc = e
@@ -976,7 +982,7 @@ class TestExceptStarExceptionGroupSubclass(ExceptStarTest):
 
 
 class TestExceptStarCleanup(ExceptStarTest):
-    def test_sys_exception_restored(self):
+    def test_exc_info_restored(self):
         try:
             try:
                 raise ValueError(42)
@@ -991,7 +997,7 @@ class TestExceptStarCleanup(ExceptStarTest):
 
         self.assertExceptionIsLike(exc, ZeroDivisionError('division by zero'))
         self.assertExceptionIsLike(exc.__context__, ValueError(42))
-        self.assertEqual(sys.exception(), None)
+        self.assertEqual(sys.exc_info(), (None, None, None))
 
 
 class TestExceptStar_WeirdLeafExceptions(ExceptStarTest):

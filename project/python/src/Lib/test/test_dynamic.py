@@ -140,14 +140,12 @@ class RebindBuiltinsTests(unittest.TestCase):
             def __missing__(self, key):
                 return int(key.removeprefix("_number_"))
 
-        # Need more than 256 variables to use EXTENDED_ARGS
-        variables = 400
-        code = "lambda: " + "+".join(f"_number_{i}" for i in range(variables))
-        sum_func = eval(code, MyGlobals())
-        expected = sum(range(variables))
+        code = "lambda: " + "+".join(f"_number_{i}" for i in range(1000))
+        sum_1000 = eval(code, MyGlobals())
+        expected = sum(range(1000))
         # Warm up the the function for quickening (PEP 659)
         for _ in range(30):
-            self.assertEqual(sum_func(), expected)
+            self.assertEqual(sum_1000(), expected)
 
 
 class TestTracing(unittest.TestCase):

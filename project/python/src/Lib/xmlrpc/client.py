@@ -850,9 +850,9 @@ class MultiCallIterator:
 
     def __getitem__(self, i):
         item = self.results[i]
-        if isinstance(item, dict):
+        if type(item) == type({}):
             raise Fault(item['faultCode'], item['faultString'])
-        elif isinstance(item, list):
+        elif type(item) == type([]):
             return item[0]
         else:
             raise ValueError("unexpected type in multicall result")
@@ -1339,7 +1339,10 @@ class Transport:
 
         p, u = self.getparser()
 
-        while data := stream.read(1024):
+        while 1:
+            data = stream.read(1024)
+            if not data:
+                break
             if self.verbose:
                 print("body:", repr(data))
             p.feed(data)

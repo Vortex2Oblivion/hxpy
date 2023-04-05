@@ -113,8 +113,10 @@ PyMethod_New(PyObject *func, PyObject *self)
         return NULL;
     }
     im->im_weakreflist = NULL;
-    im->im_func = Py_NewRef(func);
-    im->im_self = Py_NewRef(self);
+    Py_INCREF(func);
+    im->im_func = func;
+    Py_INCREF(self);
+    im->im_self = self;
     im->vectorcall = method_vectorcall;
     _PyObject_GC_TRACK(im);
     return (PyObject *)im;
@@ -193,7 +195,8 @@ method_getattro(PyObject *obj, PyObject *name)
         if (f != NULL)
             return f(descr, obj, (PyObject *)Py_TYPE(obj));
         else {
-            return Py_NewRef(descr);
+            Py_INCREF(descr);
+            return descr;
         }
     }
 
@@ -264,7 +267,8 @@ method_richcompare(PyObject *self, PyObject *other, int op)
         res = eq ? Py_True : Py_False;
     else
         res = eq ? Py_False : Py_True;
-    return Py_NewRef(res);
+    Py_INCREF(res);
+    return res;
 }
 
 static PyObject *
@@ -283,7 +287,8 @@ method_repr(PyMethodObject *a)
     }
 
     if (funcname != NULL && !PyUnicode_Check(funcname)) {
-        Py_SETREF(funcname, NULL);
+        Py_DECREF(funcname);
+        funcname = NULL;
     }
 
     /* XXX Shouldn't use repr()/%R here! */
@@ -354,7 +359,8 @@ PyInstanceMethod_New(PyObject *func) {
     method = PyObject_GC_New(PyInstanceMethodObject,
                              &PyInstanceMethod_Type);
     if (method == NULL) return NULL;
-    method->func = Py_NewRef(func);
+    Py_INCREF(func);
+    method->func = func;
     _PyObject_GC_TRACK(method);
     return (PyObject *)method;
 }
@@ -406,7 +412,8 @@ instancemethod_getattro(PyObject *self, PyObject *name)
         if (f != NULL)
             return f(descr, self, (PyObject *)Py_TYPE(self));
         else {
-            return Py_NewRef(descr);
+            Py_INCREF(descr);
+            return descr;
         }
     }
 
@@ -436,7 +443,8 @@ static PyObject *
 instancemethod_descr_get(PyObject *descr, PyObject *obj, PyObject *type) {
     PyObject *func = PyInstanceMethod_GET_FUNCTION(descr);
     if (obj == NULL) {
-        return Py_NewRef(func);
+        Py_INCREF(func);
+        return func;
     }
     else
         return PyMethod_New(func, obj);
@@ -464,7 +472,8 @@ instancemethod_richcompare(PyObject *self, PyObject *other, int op)
         res = eq ? Py_True : Py_False;
     else
         res = eq ? Py_False : Py_True;
-    return Py_NewRef(res);
+    Py_INCREF(res);
+    return res;
 }
 
 static PyObject *
@@ -483,7 +492,8 @@ instancemethod_repr(PyObject *self)
         return NULL;
     }
     if (funcname != NULL && !PyUnicode_Check(funcname)) {
-        Py_SETREF(funcname, NULL);
+        Py_DECREF(funcname);
+        funcname = NULL;
     }
 
     result = PyUnicode_FromFormat("<instancemethod %V at %p>",

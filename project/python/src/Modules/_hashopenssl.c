@@ -32,11 +32,12 @@
 /* EVP is the preferred interface to hashing in OpenSSL */
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
-#include <openssl/crypto.h>       // FIPS_mode()
+#include <openssl/crypto.h>
 /* We use the object interface to discover what hashes OpenSSL supports. */
 #include <openssl/objects.h>
 #include <openssl/err.h>
 
+#include <openssl/crypto.h>       // FIPS_mode()
 
 #ifndef OPENSSL_THREADS
 #  error "OPENSSL_THREADS is not defined, Python requires thread-safe OpenSSL"
@@ -254,7 +255,11 @@ _setException(PyObject *exc, const char* altmsg, ...)
     const char *lib, *func, *reason;
     va_list vargs;
 
+#ifdef HAVE_STDARG_PROTOTYPES
     va_start(vargs, altmsg);
+#else
+    va_start(vargs);
+#endif
     if (!errcode) {
         if (altmsg == NULL) {
             PyErr_SetString(exc, "no reason supplied");

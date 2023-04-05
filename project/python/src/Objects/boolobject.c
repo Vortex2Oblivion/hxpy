@@ -2,10 +2,7 @@
 
 #include "Python.h"
 #include "pycore_object.h"      // _Py_FatalRefcountError()
-#include "pycore_long.h"        // FALSE_TAG TRUE_TAG
 #include "pycore_runtime.h"       // _Py_ID()
-
-#include <stddef.h>
 
 /* We define bool_repr to return "False" or "True" */
 
@@ -26,7 +23,8 @@ PyObject *PyBool_FromLong(long ok)
         result = Py_True;
     else
         result = Py_False;
-    return Py_NewRef(result);
+    Py_INCREF(result);
+    return result;
 }
 
 /* We define bool_new to always return either Py_True or Py_False */
@@ -156,8 +154,8 @@ bool_dealloc(PyObject* Py_UNUSED(ignore))
 PyTypeObject PyBool_Type = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
     "bool",
-    offsetof(struct _longobject, long_value.ob_digit),  /* tp_basicsize */
-    sizeof(digit),                              /* tp_itemsize */
+    sizeof(struct _longobject),
+    0,
     bool_dealloc,                               /* tp_dealloc */
     0,                                          /* tp_vectorcall_offset */
     0,                                          /* tp_getattr */
@@ -198,15 +196,11 @@ PyTypeObject PyBool_Type = {
 /* The objects representing bool values False and True */
 
 struct _longobject _Py_FalseStruct = {
-    PyObject_HEAD_INIT(&PyBool_Type)
-    { .lv_tag = _PyLong_FALSE_TAG,
-        { 0 }
-    }
+    PyVarObject_HEAD_INIT(&PyBool_Type, 0)
+    { 0 }
 };
 
 struct _longobject _Py_TrueStruct = {
-    PyObject_HEAD_INIT(&PyBool_Type)
-    { .lv_tag = _PyLong_TRUE_TAG,
-        { 1 }
-    }
+    PyVarObject_HEAD_INIT(&PyBool_Type, 1)
+    { 1 }
 };

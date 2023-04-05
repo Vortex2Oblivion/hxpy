@@ -27,7 +27,7 @@ EXTENSIONS.path = None
 EXTENSIONS.ext = None
 EXTENSIONS.filename = None
 EXTENSIONS.file_path = None
-EXTENSIONS.name = '_testsinglephase'
+EXTENSIONS.name = '_testcapi'
 
 def _extension_details():
     global EXTENSIONS

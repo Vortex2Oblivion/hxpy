@@ -3,8 +3,7 @@
 #include "Python.h"
 #include "pycore_abstract.h"      // _PyIndex_Check()
 #include "pycore_interp.h"        // PyInterpreterState.list
-#include "pycore_list.h"          // struct _Py_list_state, _PyListIterObject
-#include "pycore_long.h"          // _PyLong_DigitCount
+#include "pycore_list.h"          // struct _Py_list_state
 #include "pycore_object.h"        // _PyObject_GC_TRACK()
 #include "pycore_tuple.h"         // _PyTuple_FromArray()
 #include <stddef.h>
@@ -300,7 +299,8 @@ ins1(PyListObject *self, Py_ssize_t where, PyObject *v)
     items = self->ob_item;
     for (i = n; --i >= where; )
         items[i+1] = items[i];
-    items[where] = Py_NewRef(v);
+    Py_INCREF(v);
+    items[where] = v;
     return 0;
 }
 
@@ -332,7 +332,8 @@ int
 PyList_Append(PyObject *op, PyObject *newitem)
 {
     if (PyList_Check(op) && (newitem != NULL)) {
-        return _PyList_AppendTakeRef((PyListObject *)op, Py_NewRef(newitem));
+        Py_INCREF(newitem);
+        return _PyList_AppendTakeRef((PyListObject *)op, newitem);
     }
     PyErr_BadInternalCall();
     return -1;
@@ -460,7 +461,8 @@ list_item(PyListObject *a, Py_ssize_t i)
         PyErr_SetObject(PyExc_IndexError, &_Py_STR(list_err));
         return NULL;
     }
-    return Py_NewRef(a->ob_item[i]);
+    Py_INCREF(a->ob_item[i]);
+    return a->ob_item[i];
 }
 
 static PyObject *
@@ -481,7 +483,8 @@ list_slice(PyListObject *a, Py_ssize_t ilow, Py_ssize_t ihigh)
     dest = np->ob_item;
     for (i = 0; i < len; i++) {
         PyObject *v = src[i];
-        dest[i] = Py_NewRef(v);
+        Py_INCREF(v);
+        dest[i] = v;
     }
     Py_SET_SIZE(np, len);
     return (PyObject *)np;
@@ -536,13 +539,15 @@ list_concat(PyListObject *a, PyObject *bb)
     dest = np->ob_item;
     for (i = 0; i < Py_SIZE(a); i++) {
         PyObject *v = src[i];
-        dest[i] = Py_NewRef(v);
+        Py_INCREF(v);
+        dest[i] = v;
     }
     src = b->ob_item;
     dest = np->ob_item + Py_SIZE(a);
     for (i = 0; i < Py_SIZE(b); i++) {
         PyObject *v = src[i];
-        dest[i] = Py_NewRef(v);
+        Py_INCREF(v);
+        dest[i] = v;
     }
     Py_SET_SIZE(np, size);
     return (PyObject *)np;
@@ -552,41 +557,47 @@ list_concat(PyListObject *a, PyObject *bb)
 static PyObject *
 list_repeat(PyListObject *a, Py_ssize_t n)
 {
-    const Py_ssize_t input_size = Py_SIZE(a);
-    if (input_size == 0 || n <= 0)
-        return PyList_New(0);
-    assert(n > 0);
-
-    if (input_size > PY_SSIZE_T_MAX / n)
+    Py_ssize_t size;
+    PyListObject *np;
+    if (n < 0)
+        n = 0;
+    if (n > 0 && Py_SIZE(a) > PY_SSIZE_T_MAX / n)
         return PyErr_NoMemory();
-    Py_ssize_t output_size = input_size * n;
-
-    PyListObject *np = (PyListObject *) list_new_prealloc(output_size);
+    size = Py_SIZE(a) * n;
+    if (size == 0)
+        return PyList_New(0);
+    np = (PyListObject *) list_new_prealloc(size);
     if (np == NULL)
         return NULL;
-
     PyObject **dest = np->ob_item;
-    if (input_size == 1) {
+    PyObject **dest_end = dest + size;
+    if (Py_SIZE(a) == 1) {
         PyObject *elem = a->ob_item[0];
-        _Py_RefcntAdd(elem, n);
-        PyObject **dest_end = dest + output_size;
+        Py_SET_REFCNT(elem, Py_REFCNT(elem) + n);
+#ifdef Py_REF_DEBUG
+        _Py_RefTotal += n;
+#endif
         while (dest < dest_end) {
             *dest++ = elem;
         }
     }
     else {
         PyObject **src = a->ob_item;
-        PyObject **src_end = src + input_size;
+        PyObject **src_end = src + Py_SIZE(a);
         while (src < src_end) {
-            _Py_RefcntAdd(*src, n);
+            Py_SET_REFCNT(*src, Py_REFCNT(*src) + n);
+#ifdef Py_REF_DEBUG
+            _Py_RefTotal += n;
+#endif
             *dest++ = *src++;
         }
-
-        _Py_memory_repeat((char *)np->ob_item, sizeof(PyObject *)*output_size,
-                                        sizeof(PyObject *)*input_size);
+        // Now src chases after dest in the same buffer
+        src = np->ob_item;
+        while (dest < dest_end) {
+            *dest++ = *src++;
+        }
     }
-
-    Py_SET_SIZE(np, output_size);
+    Py_SET_SIZE(np, size);
     return (PyObject *) np;
 }
 
@@ -711,7 +722,8 @@ list_ass_slice(PyListObject *a, Py_ssize_t ilow, Py_ssize_t ihigh, PyObject *v)
     }
     for (k = 0; k < n; k++, ilow++) {
         PyObject *w = vitem[k];
-        item[ilow] = Py_XNewRef(w);
+        Py_XINCREF(w);
+        item[ilow] = w;
     }
     for (k = norig - 1; k >= 0; --k)
         Py_XDECREF(recycle[k]);
@@ -737,32 +749,40 @@ PyList_SetSlice(PyObject *a, Py_ssize_t ilow, Py_ssize_t ihigh, PyObject *v)
 static PyObject *
 list_inplace_repeat(PyListObject *self, Py_ssize_t n)
 {
-    Py_ssize_t input_size = PyList_GET_SIZE(self);
-    if (input_size == 0 || n == 1) {
-        return Py_NewRef(self);
+    PyObject **items;
+    Py_ssize_t size, i, j, p;
+
+
+    size = PyList_GET_SIZE(self);
+    if (size == 0 || n == 1) {
+        Py_INCREF(self);
+        return (PyObject *)self;
     }
 
     if (n < 1) {
         (void)_list_clear(self);
-        return Py_NewRef(self);
+        Py_INCREF(self);
+        return (PyObject *)self;
     }
 
-    if (input_size > PY_SSIZE_T_MAX / n) {
+    if (size > PY_SSIZE_T_MAX / n) {
         return PyErr_NoMemory();
     }
-    Py_ssize_t output_size = input_size * n;
 
-    if (list_resize(self, output_size) < 0)
+    if (list_resize(self, size*n) < 0)
         return NULL;
 
-    PyObject **items = self->ob_item;
-    for (Py_ssize_t j = 0; j < input_size; j++) {
-        _Py_RefcntAdd(items[j], n-1);
+    p = size;
+    items = self->ob_item;
+    for (i = 1; i < n; i++) { /* Start counting at 1, not 0 */
+        for (j = 0; j < size; j++) {
+            PyObject *o = items[j];
+            Py_INCREF(o);
+            items[p++] = o;
+        }
     }
-    _Py_memory_repeat((char *)items, sizeof(PyObject *)*output_size,
-                      sizeof(PyObject *)*input_size);
-
-    return Py_NewRef(self);
+    Py_INCREF(self);
+    return (PyObject *)self;
 }
 
 static int
@@ -775,7 +795,8 @@ list_ass_item(PyListObject *a, Py_ssize_t i, PyObject *v)
     }
     if (v == NULL)
         return list_ass_slice(a, i, i+1, v);
-    Py_SETREF(a->ob_item[i], Py_NewRef(v));
+    Py_INCREF(v);
+    Py_SETREF(a->ob_item[i], v);
     return 0;
 }
 
@@ -903,7 +924,8 @@ list_extend(PyListObject *self, PyObject *iterable)
         dest = self->ob_item + m;
         for (i = 0; i < n; i++) {
             PyObject *o = src[i];
-            dest[i] = Py_NewRef(o);
+            Py_INCREF(o);
+            dest[i] = o;
         }
         Py_DECREF(iterable);
         Py_RETURN_NONE;
@@ -991,7 +1013,8 @@ list_inplace_concat(PyListObject *self, PyObject *other)
     if (result == NULL)
         return result;
     Py_DECREF(result);
-    return Py_NewRef(self);
+    Py_INCREF(self);
+    return (PyObject *)self;
 }
 
 /*[clinic input]
@@ -1023,29 +1046,21 @@ list_pop_impl(PyListObject *self, Py_ssize_t index)
         PyErr_SetString(PyExc_IndexError, "pop index out of range");
         return NULL;
     }
-
-    PyObject **items = self->ob_item;
-    v = items[index];
-    const Py_ssize_t size_after_pop = Py_SIZE(self) - 1;
-    if (size_after_pop == 0) {
-        Py_INCREF(v);
-        status = _list_clear(self);
+    v = self->ob_item[index];
+    if (index == Py_SIZE(self) - 1) {
+        status = list_resize(self, Py_SIZE(self) - 1);
+        if (status >= 0)
+            return v; /* and v now owns the reference the list had */
+        else
+            return NULL;
     }
-    else {
-        if ((size_after_pop - index) > 0) {
-            memmove(&items[index], &items[index+1], (size_after_pop - index) * sizeof(PyObject *));
-        }
-        status = list_resize(self, size_after_pop);
-    }
-    if (status >= 0) {
-        return v; // and v now owns the reference the list had
-    }
-    else {
-        // list resize failed, need to restore
-        memmove(&items[index+1], &items[index], (size_after_pop - index)* sizeof(PyObject *));
-        items[index] = v;
+    Py_INCREF(v);
+    status = list_ass_slice(self, index, index+1, (PyObject *)NULL);
+    if (status < 0) {
+        Py_DECREF(v);
         return NULL;
     }
+    return v;
 }
 
 /* Reverse a slice of a list in place, from lo up to (exclusive) hi. */
@@ -2145,21 +2160,24 @@ unsafe_latin_compare(PyObject *v, PyObject *w, MergeState *ms)
 static int
 unsafe_long_compare(PyObject *v, PyObject *w, MergeState *ms)
 {
-    PyLongObject *vl, *wl;
-    intptr_t v0, w0;
-    int res;
+    PyLongObject *vl, *wl; sdigit v0, w0; int res;
 
     /* Modified from Objects/longobject.c:long_compare, assuming: */
     assert(Py_IS_TYPE(v, &PyLong_Type));
     assert(Py_IS_TYPE(w, &PyLong_Type));
-    assert(_PyLong_IsCompact((PyLongObject *)v));
-    assert(_PyLong_IsCompact((PyLongObject *)w));
+    assert(Py_ABS(Py_SIZE(v)) <= 1);
+    assert(Py_ABS(Py_SIZE(w)) <= 1);
 
     vl = (PyLongObject*)v;
     wl = (PyLongObject*)w;
 
-    v0 = _PyLong_CompactValue(vl);
-    w0 = _PyLong_CompactValue(wl);
+    v0 = Py_SIZE(vl) == 0 ? 0 : (sdigit)vl->ob_digit[0];
+    w0 = Py_SIZE(wl) == 0 ? 0 : (sdigit)wl->ob_digit[0];
+
+    if (Py_SIZE(vl) < 0)
+        v0 = -v0;
+    if (Py_SIZE(wl) < 0)
+        w0 = -w0;
 
     res = v0 < w0;
     assert(res == PyObject_RichCompareBool(v, w, Py_LT));
@@ -2233,7 +2251,7 @@ list.sort
 
     *
     key as keyfunc: object = None
-    reverse: bool = False
+    reverse: bool(accept={int}) = False
 
 Sort the list in ascending order and return None.
 
@@ -2248,7 +2266,7 @@ The reverse flag can be set to sort in descending order.
 
 static PyObject *
 list_sort_impl(PyListObject *self, PyObject *keyfunc, int reverse)
-/*[clinic end generated code: output=57b9f9c5e23fbe42 input=a74c4cd3ec6b5c08]*/
+/*[clinic end generated code: output=57b9f9c5e23fbe42 input=cb56cd179a713060]*/
 {
     MergeState ms;
     Py_ssize_t nremaining;
@@ -2357,7 +2375,7 @@ list_sort_impl(PyListObject *self, PyObject *keyfunc, int reverse)
             if (keys_are_all_same_type) {
                 if (key_type == &PyLong_Type &&
                     ints_are_bounded &&
-                    !_PyLong_IsCompact((PyLongObject *)key)) {
+                    Py_ABS(Py_SIZE(key)) > 1) {
 
                     ints_are_bounded = 0;
                 }
@@ -2505,7 +2523,8 @@ keyfunc_fail:
         }
         PyMem_Free(final_ob_item);
     }
-    return Py_XNewRef(result);
+    Py_XINCREF(result);
+    return result;
 }
 #undef IFLT
 #undef ISLT
@@ -2561,27 +2580,6 @@ PyList_AsTuple(PyObject *v)
         return NULL;
     }
     return _PyTuple_FromArray(((PyListObject *)v)->ob_item, Py_SIZE(v));
-}
-
-PyObject *
-_PyList_FromArraySteal(PyObject *const *src, Py_ssize_t n)
-{
-    if (n == 0) {
-        return PyList_New(0);
-    }
-
-    PyListObject *list = (PyListObject *)PyList_New(n);
-    if (list == NULL) {
-        for (Py_ssize_t i = 0; i < n; i++) {
-            Py_DECREF(src[i]);
-        }
-        return NULL;
-    }
-
-    PyObject **dst = list->ob_item;
-    memcpy(dst, src, n * sizeof(PyObject *));
-
-    return (PyObject *)list;
 }
 
 /*[clinic input]
@@ -2833,17 +2831,17 @@ static PyObject *
 list___sizeof___impl(PyListObject *self)
 /*[clinic end generated code: output=3417541f95f9a53e input=b8030a5d5ce8a187]*/
 {
-    size_t res = _PyObject_SIZE(Py_TYPE(self));
-    res += (size_t)self->allocated * sizeof(void*);
-    return PyLong_FromSize_t(res);
+    Py_ssize_t res;
+
+    res = _PyObject_SIZE(Py_TYPE(self)) + self->allocated * sizeof(void*);
+    return PyLong_FromSsize_t(res);
 }
 
 static PyObject *list_iter(PyObject *seq);
 static PyObject *list_subscript(PyListObject*, PyObject*);
 
 static PyMethodDef list_methods[] = {
-    {"__getitem__", (PyCFunction)list_subscript, METH_O|METH_COEXIST,
-     PyDoc_STR("__getitem__($self, index, /)\n--\n\nReturn self[index].")},
+    {"__getitem__", (PyCFunction)list_subscript, METH_O|METH_COEXIST, "x.__getitem__(y) <==> x[y]"},
     LIST___REVERSED___METHODDEF
     LIST___SIZEOF___METHODDEF
     LIST_CLEAR_METHODDEF
@@ -2913,7 +2911,8 @@ list_subscript(PyListObject* self, PyObject* item)
             dest = ((PyListObject *)result)->ob_item;
             for (cur = start, i = 0; i < slicelength;
                  cur += (size_t)step, i++) {
-                it = Py_NewRef(src[cur]);
+                it = src[cur];
+                Py_INCREF(it);
                 dest[i] = it;
             }
             Py_SET_SIZE(result, slicelength);
@@ -3068,7 +3067,8 @@ list_ass_subscript(PyListObject* self, PyObject* item, PyObject* value)
             for (cur = start, i = 0; i < slicelength;
                  cur += (size_t)step, i++) {
                 garbage[i] = selfitems[cur];
-                ins = Py_NewRef(seqitems[i]);
+                ins = seqitems[i];
+                Py_INCREF(ins);
                 selfitems[cur] = ins;
             }
 
@@ -3143,13 +3143,19 @@ PyTypeObject PyList_Type = {
 
 /*********************** List Iterator **************************/
 
-static void listiter_dealloc(_PyListIterObject *);
-static int listiter_traverse(_PyListIterObject *, visitproc, void *);
-static PyObject *listiter_next(_PyListIterObject *);
-static PyObject *listiter_len(_PyListIterObject *, PyObject *);
+typedef struct {
+    PyObject_HEAD
+    Py_ssize_t it_index;
+    PyListObject *it_seq; /* Set to NULL when iterator is exhausted */
+} listiterobject;
+
+static void listiter_dealloc(listiterobject *);
+static int listiter_traverse(listiterobject *, visitproc, void *);
+static PyObject *listiter_next(listiterobject *);
+static PyObject *listiter_len(listiterobject *, PyObject *);
 static PyObject *listiter_reduce_general(void *_it, int forward);
-static PyObject *listiter_reduce(_PyListIterObject *, PyObject *);
-static PyObject *listiter_setstate(_PyListIterObject *, PyObject *state);
+static PyObject *listiter_reduce(listiterobject *, PyObject *);
+static PyObject *listiter_setstate(listiterobject *, PyObject *state);
 
 PyDoc_STRVAR(length_hint_doc, "Private method returning an estimate of len(list(it)).");
 PyDoc_STRVAR(reduce_doc, "Return state information for pickling.");
@@ -3165,7 +3171,7 @@ static PyMethodDef listiter_methods[] = {
 PyTypeObject PyListIter_Type = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
     "list_iterator",                            /* tp_name */
-    sizeof(_PyListIterObject),                  /* tp_basicsize */
+    sizeof(listiterobject),                     /* tp_basicsize */
     0,                                          /* tp_itemsize */
     /* methods */
     (destructor)listiter_dealloc,               /* tp_dealloc */
@@ -3199,23 +3205,24 @@ PyTypeObject PyListIter_Type = {
 static PyObject *
 list_iter(PyObject *seq)
 {
-    _PyListIterObject *it;
+    listiterobject *it;
 
     if (!PyList_Check(seq)) {
         PyErr_BadInternalCall();
         return NULL;
     }
-    it = PyObject_GC_New(_PyListIterObject, &PyListIter_Type);
+    it = PyObject_GC_New(listiterobject, &PyListIter_Type);
     if (it == NULL)
         return NULL;
     it->it_index = 0;
-    it->it_seq = (PyListObject *)Py_NewRef(seq);
+    Py_INCREF(seq);
+    it->it_seq = (PyListObject *)seq;
     _PyObject_GC_TRACK(it);
     return (PyObject *)it;
 }
 
 static void
-listiter_dealloc(_PyListIterObject *it)
+listiter_dealloc(listiterobject *it)
 {
     _PyObject_GC_UNTRACK(it);
     Py_XDECREF(it->it_seq);
@@ -3223,14 +3230,14 @@ listiter_dealloc(_PyListIterObject *it)
 }
 
 static int
-listiter_traverse(_PyListIterObject *it, visitproc visit, void *arg)
+listiter_traverse(listiterobject *it, visitproc visit, void *arg)
 {
     Py_VISIT(it->it_seq);
     return 0;
 }
 
 static PyObject *
-listiter_next(_PyListIterObject *it)
+listiter_next(listiterobject *it)
 {
     PyListObject *seq;
     PyObject *item;
@@ -3244,7 +3251,8 @@ listiter_next(_PyListIterObject *it)
     if (it->it_index < PyList_GET_SIZE(seq)) {
         item = PyList_GET_ITEM(seq, it->it_index);
         ++it->it_index;
-        return Py_NewRef(item);
+        Py_INCREF(item);
+        return item;
     }
 
     it->it_seq = NULL;
@@ -3253,7 +3261,7 @@ listiter_next(_PyListIterObject *it)
 }
 
 static PyObject *
-listiter_len(_PyListIterObject *it, PyObject *Py_UNUSED(ignored))
+listiter_len(listiterobject *it, PyObject *Py_UNUSED(ignored))
 {
     Py_ssize_t len;
     if (it->it_seq) {
@@ -3265,13 +3273,13 @@ listiter_len(_PyListIterObject *it, PyObject *Py_UNUSED(ignored))
 }
 
 static PyObject *
-listiter_reduce(_PyListIterObject *it, PyObject *Py_UNUSED(ignored))
+listiter_reduce(listiterobject *it, PyObject *Py_UNUSED(ignored))
 {
     return listiter_reduce_general(it, 1);
 }
 
 static PyObject *
-listiter_setstate(_PyListIterObject *it, PyObject *state)
+listiter_setstate(listiterobject *it, PyObject *state)
 {
     Py_ssize_t index = PyLong_AsSsize_t(state);
     if (index == -1 && PyErr_Occurred())
@@ -3358,7 +3366,8 @@ list___reversed___impl(PyListObject *self)
         return NULL;
     assert(PyList_Check(self));
     it->it_index = PyList_GET_SIZE(self) - 1;
-    it->it_seq = (PyListObject*)Py_NewRef(self);
+    Py_INCREF(self);
+    it->it_seq = self;
     PyObject_GC_Track(it);
     return (PyObject *)it;
 }
@@ -3396,7 +3405,8 @@ listreviter_next(listreviterobject *it)
     if (index>=0 && index < PyList_GET_SIZE(seq)) {
         item = PyList_GET_ITEM(seq, index);
         it->it_index--;
-        return Py_NewRef(item);
+        Py_INCREF(item);
+        return item;
     }
     it->it_index = -1;
     it->it_seq = NULL;
@@ -3442,31 +3452,19 @@ listiter_reduce_general(void *_it, int forward)
 {
     PyObject *list;
 
-    /* _PyEval_GetBuiltin can invoke arbitrary code,
-     * call must be before access of iterator pointers.
-     * see issue #101765 */
-
     /* the objects are not the same, index is of different types! */
     if (forward) {
-        PyObject *iter = _PyEval_GetBuiltin(&_Py_ID(iter));
-        if (!iter) {
-            return NULL;
-        }
-        _PyListIterObject *it = (_PyListIterObject *)_it;
+        listiterobject *it = (listiterobject *)_it;
         if (it->it_seq) {
-            return Py_BuildValue("N(O)n", iter, it->it_seq, it->it_index);
+            return Py_BuildValue("N(O)n", _PyEval_GetBuiltin(&_Py_ID(iter)),
+                                 it->it_seq, it->it_index);
         }
-        Py_DECREF(iter);
     } else {
-        PyObject *reversed = _PyEval_GetBuiltin(&_Py_ID(reversed));
-        if (!reversed) {
-            return NULL;
-        }
         listreviterobject *it = (listreviterobject *)_it;
         if (it->it_seq) {
-            return Py_BuildValue("N(O)n", reversed, it->it_seq, it->it_index);
+            return Py_BuildValue("N(O)n", _PyEval_GetBuiltin(&_Py_ID(reversed)),
+                                 it->it_seq, it->it_index);
         }
-        Py_DECREF(reversed);
     }
     /* empty iterator, create an empty list */
     list = PyList_New(0);

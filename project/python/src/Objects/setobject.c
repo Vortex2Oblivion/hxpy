@@ -588,7 +588,8 @@ set_merge(PySetObject *so, PyObject *otherset)
             key = other_entry->key;
             if (key != NULL) {
                 assert(so_entry->key == NULL);
-                so_entry->key = Py_NewRef(key);
+                Py_INCREF(key);
+                so_entry->key = key;
                 so_entry->hash = other_entry->hash;
             }
         }
@@ -606,8 +607,8 @@ set_merge(PySetObject *so, PyObject *otherset)
         for (i = other->mask + 1; i > 0 ; i--, other_entry++) {
             key = other_entry->key;
             if (key != NULL && key != dummy) {
-                set_insert_clean(newtable, newmask, Py_NewRef(key),
-                                 other_entry->hash);
+                Py_INCREF(key);
+                set_insert_clean(newtable, newmask, key, other_entry->hash);
             }
         }
         return 0;
@@ -819,7 +820,8 @@ static PyObject *setiter_iternext(setiterobject *si)
         goto fail;
     si->len--;
     key = entry[i].key;
-    return Py_NewRef(key);
+    Py_INCREF(key);
+    return key;
 
 fail:
     si->si_set = NULL;
@@ -866,7 +868,8 @@ set_iter(PySetObject *so)
     setiterobject *si = PyObject_GC_New(setiterobject, &PySetIter_Type);
     if (si == NULL)
         return NULL;
-    si->si_set = (PySetObject*)Py_NewRef(so);
+    Py_INCREF(so);
+    si->si_set = so;
     si->si_used = so->used;
     si->si_pos = 0;
     si->len = so->used;
@@ -994,7 +997,8 @@ make_new_frozenset(PyTypeObject *type, PyObject *iterable)
 
     if (iterable != NULL && PyFrozenSet_CheckExact(iterable)) {
         /* frozenset(f) is idempotent */
-        return Py_NewRef(iterable);
+        Py_INCREF(iterable);
+        return iterable;
     }
     return make_new_set(type, iterable);
 }
@@ -1096,7 +1100,8 @@ static PyObject *
 frozenset_copy(PySetObject *so, PyObject *Py_UNUSED(ignored))
 {
     if (PyFrozenSet_CheckExact(so)) {
-        return Py_NewRef(so);
+        Py_INCREF(so);
+        return (PyObject *)so;
     }
     return set_copy(so, NULL);
 }
@@ -1168,7 +1173,8 @@ set_ior(PySetObject *so, PyObject *other)
 
     if (set_update_internal(so, other))
         return NULL;
-    return Py_NewRef(so);
+    Py_INCREF(so);
+    return (PyObject *)so;
 }
 
 static PyObject *
@@ -1258,11 +1264,12 @@ static PyObject *
 set_intersection_multi(PySetObject *so, PyObject *args)
 {
     Py_ssize_t i;
+    PyObject *result = (PyObject *)so;
 
     if (PyTuple_GET_SIZE(args) == 0)
         return set_copy(so, NULL);
 
-    PyObject *result = Py_NewRef(so);
+    Py_INCREF(so);
     for (i=0 ; i<PyTuple_GET_SIZE(args) ; i++) {
         PyObject *other = PyTuple_GET_ITEM(args, i);
         PyObject *newresult = set_intersection((PySetObject *)result, other);
@@ -1270,7 +1277,8 @@ set_intersection_multi(PySetObject *so, PyObject *args)
             Py_DECREF(result);
             return NULL;
         }
-        Py_SETREF(result, newresult);
+        Py_DECREF(result);
+        result = newresult;
     }
     return result;
 }
@@ -1328,7 +1336,8 @@ set_iand(PySetObject *so, PyObject *other)
     if (result == NULL)
         return NULL;
     Py_DECREF(result);
-    return Py_NewRef(so);
+    Py_INCREF(so);
+    return (PyObject *)so;
 }
 
 static PyObject *
@@ -1600,7 +1609,8 @@ set_isub(PySetObject *so, PyObject *other)
         Py_RETURN_NOTIMPLEMENTED;
     if (set_difference_update_internal(so, other))
         return NULL;
-    return Py_NewRef(so);
+    Py_INCREF(so);
+    return (PyObject *)so;
 }
 
 static PyObject *
@@ -1637,7 +1647,8 @@ set_symmetric_difference_update(PySetObject *so, PyObject *other)
     }
 
     if (PyAnySet_Check(other)) {
-        otherset = (PySetObject *)Py_NewRef(other);
+        Py_INCREF(other);
+        otherset = (PySetObject *)other;
     } else {
         otherset = (PySetObject *)make_new_set_basetype(Py_TYPE(so), other);
         if (otherset == NULL)
@@ -1712,7 +1723,8 @@ set_ixor(PySetObject *so, PyObject *other)
     if (result == NULL)
         return NULL;
     Py_DECREF(result);
-    return Py_NewRef(so);
+    Py_INCREF(so);
+    return (PyObject *)so;
 }
 
 static PyObject *
@@ -1723,13 +1735,13 @@ set_issubset(PySetObject *so, PyObject *other)
     int rv;
 
     if (!PyAnySet_Check(other)) {
-        PyObject *tmp = set_intersection(so, other);
-        if (tmp == NULL) {
+        PyObject *tmp, *result;
+        tmp = make_new_set(&PySet_Type, other);
+        if (tmp == NULL)
             return NULL;
-        }
-        int result = (PySet_GET_SIZE(tmp) == PySet_GET_SIZE(so));
+        result = set_issubset(so, tmp);
         Py_DECREF(tmp);
-        return PyBool_FromLong(result);
+        return result;
     }
     if (PySet_GET_SIZE(so) > PySet_GET_SIZE(other))
         Py_RETURN_FALSE;
@@ -1957,11 +1969,12 @@ done:
 static PyObject *
 set_sizeof(PySetObject *so, PyObject *Py_UNUSED(ignored))
 {
-    size_t res = _PyObject_SIZE(Py_TYPE(so));
-    if (so->table != so->smalltable) {
-        res += ((size_t)so->mask + 1) * sizeof(setentry);
-    }
-    return PyLong_FromSize_t(res);
+    Py_ssize_t res;
+
+    res = _PyObject_SIZE(Py_TYPE(so));
+    if (so->table != so->smalltable)
+        res = res + (so->mask + 1) * sizeof(setentry);
+    return PyLong_FromSsize_t(res);
 }
 
 PyDoc_STRVAR(sizeof_doc, "S.__sizeof__() -> size of S in memory, in bytes");

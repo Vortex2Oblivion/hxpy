@@ -2,5 +2,10 @@
 <xml>
 	<files id="haxe">
 		<compilervalue name="-I" value="${haxelib:hxpy}/hxpy/include/" />
-	</files>
+		<compilervalue name="-I" value="${haxelib:hxpy}/libs" />
+	</files>	
+	<target id="haxe" tool='linker'>
+		<lib name="${haxelib:hxpy}/libs/python3.lib" />
+		<lib name="${haxelib:hxpy}/libs/python311.lib" />
+	</target>
 </xml>

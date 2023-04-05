@@ -2,6 +2,7 @@ import gc
 import pprint
 import sys
 import unittest
+from test import support
 
 
 class TestGetProfile(unittest.TestCase):
@@ -436,8 +437,12 @@ class TestEdgeCases(unittest.TestCase):
                 sys.setprofile(bar)
 
         sys.setprofile(A())
-        sys.setprofile(foo)
-        self.assertEqual(sys.getprofile(), bar)
+        with support.catch_unraisable_exception() as cm:
+            sys.setprofile(foo)
+            self.assertEqual(cm.unraisable.object, A.__del__)
+            self.assertIsInstance(cm.unraisable.exc_value, RuntimeError)
+
+        self.assertEqual(sys.getprofile(), foo)
 
 
     def test_same_object(self):
