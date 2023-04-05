@@ -2,7 +2,6 @@ package;
 
 import flixel.FlxState;
 import hxpy.Python;
-import hxpy.PythonOpen;
 class PlayState extends FlxState
 {
 	override public function create()
