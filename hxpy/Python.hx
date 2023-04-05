@@ -32,5 +32,5 @@ extern class Python
 	public static function pythonInitialize():Function;
 
     @:native("PyRun_SimpleString")
-	public static function pythonRunSimpleString(s:String):Function;
+	public static function pythonRunSimpleString(s:String):String;
 }
