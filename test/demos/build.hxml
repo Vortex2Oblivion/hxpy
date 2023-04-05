@@ -6,4 +6,4 @@
 -D HXCPP_M64
 -D analyzer-optimize
 --main Main
---cmd haxe --class-path src --main Main --cpp cpp -D analyzer-optimize
+--cmd haxe --class-path src --main Main --cpp cpp -D analyzer-optimize --library hxpy
