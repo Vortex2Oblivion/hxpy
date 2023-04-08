@@ -1,6 +1,4 @@
 test/flixel/export
-test/demos/pythonRunSimpleString/bin
-test/demos/pythonRunSimpleString/cpp
-test/demos/pythonOpenFile/bin
-test/demos/pythonOpenFile/cpp
+test/demos/*/bin
+test/demos/*/cpp
 .vscode

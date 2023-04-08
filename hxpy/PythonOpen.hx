@@ -20,4 +20,7 @@ extern class PythonOpen{
 
     @:native("pythonOpenFile")
 	public static function pythonOpenFile():Function;
+
+    @:native("pythonRunFunction")
+	public static function pythonRunFunction():Function;
 }
