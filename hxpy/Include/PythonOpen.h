@@ -30,6 +30,6 @@ int pythonRunFunction()
 	auto result = _PyUnicode_AsString(pValue);
 	std::cout << result << std::endl;
 
-    return;
+    return 0;
 
 }
