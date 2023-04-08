@@ -7,7 +7,7 @@ class Main {
 	public static function main():Void {
         trace("Python Ver: " + Python.VERSION);
 		PythonOpen.pythonInitialize(); //initializes the python instance
-		PythonOpen.pythonRunSimpleString("print('Hello World From Embedded Python')"); //runs code
-		PythonOpen.pythonFinalize();//closes the python instance
+		PythonOpen.pythonOpenFile(); //runs code from script.py
+		PythonOpen.pythonFinalize(); //initializes the python instance
 	}
 }

@@ -10,11 +10,14 @@ import haxe.Constraints.Function;
 @:include("<iostream>")
 extern class PythonOpen{
     @:native("Py_Initialize")
-	public static function pythonInitialize():Void;
+	public static function pythonInitialize():Function;
 
     @:native("PyRun_SimpleString")
 	public static function pythonRunSimpleString(s:String):Function;
 
-    @:native("test")
-	public static function test():Function;
+    @:native("Py_Finalize")
+	public static function pythonFinalize():Function;
+
+    @:native("pythonOpenFile")
+	public static function pythonOpenFile():Function;
 }

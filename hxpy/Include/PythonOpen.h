@@ -4,12 +4,11 @@
 #include "Python.h"
 #include "pythonrun.h"
 
-int test()
+int pythonOpenFile()
 {
     Py_Initialize();
-    PyRun_SimpleString("from time import time,ctime\n""print('Today is',ctime(time()))\n");    
-    if (Py_FinalizeEx() < 0) {
-        exit(120);
-    }
+    FILE* PScriptFile = fopen("test.py", "r");
+    if(PScriptFile){PyRun_SimpleFile(PScriptFile, "test.py");
+    fclose(PScriptFile);}
     return 0;
 }
