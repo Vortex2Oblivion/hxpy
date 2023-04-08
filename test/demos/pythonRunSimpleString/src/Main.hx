@@ -7,6 +7,6 @@ class Main {
 	public static function main():Void {
         trace("Python Ver: " + Python.VERSION);
 		PythonOpen.pythonInitialize();
-		PythonOpen.pythonRunSimpleString("print('Today is')");
+		PythonOpen.pythonRunSimpleString("print('Hello World From Embedded Python')");
 	}
 }
