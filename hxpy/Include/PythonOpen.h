@@ -7,7 +7,7 @@
 int test()
 {
     Py_Initialize();
-    PyRun_SimpleString("Hello World From Embedded Python");
+    PyRun_SimpleString("from time import time,ctime\n""print('Today is',ctime(time()))\n");    
     if (Py_FinalizeEx() < 0) {
         exit(120);
     }
