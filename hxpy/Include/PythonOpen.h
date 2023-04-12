@@ -33,3 +33,15 @@ int pythonRunFunction()
     return 0;
 
 }
+
+int pythonRunSimpleFile()
+{
+    Py_Initialize();
+
+    FILE* file = fopen("script.py", "r");
+    PyRun_SimpleFile(file, "script.py");
+
+    fclose(file);
+    Py_Finalize();
+    return 0;
+}
