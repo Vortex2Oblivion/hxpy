@@ -27,10 +27,4 @@ extern class Python
 
     @:native('::String(PY_RELEASE_SERIAL)')
 	static var RELEASE_SERIAL:String;
-
-    @:native("Py_Initialize")
-	public static function pythonInitialize():Function;
-
-    @:native("PyRun_SimpleString")
-	public static function pythonRunSimpleString(s:String):String;
 }

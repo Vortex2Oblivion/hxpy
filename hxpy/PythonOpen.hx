@@ -19,11 +19,11 @@ extern class PythonOpen{
 	public static function pythonFinalize():Function;
 
     @:native("pythonOpenFile")
-	public static function pythonOpenFile():Int;
+	public static function pythonOpenFile():Function;
 
     @:native("pythonRunFunction")
-	public static function pythonRunFunction():Int;
+	public static function pythonRunFunction():Function;
 
     @:native("pythonRunSimpleFile")
-	public static function pythonRunSimpleFile():Int;
+	public static function pythonRunSimpleFile():Function;
 }

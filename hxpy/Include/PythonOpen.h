@@ -37,11 +37,10 @@ int pythonRunFunction()
 int pythonRunSimpleFile()
 {
     Py_Initialize();
-
-    FILE* file = fopen("script.py", "r");
-    PyRun_SimpleFile(file, "script.py");
-
-    fclose(file);
-    Py_Finalize();
+	FILE* PScriptFile = fopen("script.py", "r");
+	if(PScriptFile){
+		PyRun_SimpleFile(PScriptFile, "script.py");
+		fclose(PScriptFile);
+	}
     return 0;
 }
