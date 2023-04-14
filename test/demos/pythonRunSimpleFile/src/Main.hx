@@ -8,5 +8,6 @@ class Main {
         trace("Python Ver: " + Python.VERSION);
 		PythonOpen.pythonInitialize();
 		PythonOpen.pythonRunSimpleFile(); //runs code from a file
+		PythonOpen.pythonFinalize();
 	}
 }
