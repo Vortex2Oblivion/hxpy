@@ -18,9 +18,6 @@ extern class PythonOpen{
     @:native("Py_Finalize")
 	public static function pythonFinalize():Function;
 
-    @:native("pythonOpenFile")
-	public static function pythonOpenFile():Function;
-
     @:native("pythonRunFunction")
 	public static function pythonRunFunction():Function;
 

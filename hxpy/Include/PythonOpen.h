@@ -5,17 +5,6 @@
 #include "pythonrun.h"
 
 
-int pythonOpenFile()
-{
-    Py_Initialize();
-	FILE* PScriptFile = fopen("test.py", "r");
-	if(PScriptFile){
-		PyRun_SimpleFile(PScriptFile, "test.py");
-		fclose(PScriptFile);
-	}
-    return 0;
-}
-
 int pythonRunFunction()
 {
 	//Run a python function

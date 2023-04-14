@@ -1,9 +1,9 @@
-# pythonRunSimpleString
+# pythonRunSimpleFile
 
-This demo is to showcase the pythonRunSimpelString function, this function should allow for the use of running python code directly within the application. Don't know why anyone would use that over actually adding it in normally *cough cough psych engine cough cough* but its there ig.
+This demo is to showcase the ability to run a python script from a file. No extending yet!
 ## Status
 
-working!
+NOT working!
 ## Building
 
-To build, run `haxe build.hxml` 
+To build, run haxe build.hxml , then copy over script.py into the bin folder that is outputted. Then run the application to test the Python file.
