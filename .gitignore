@@ -1,4 +1,3 @@
-test/flixel/export
 test/demos/*/bin
 test/demos/*/cpp
 .vscode
