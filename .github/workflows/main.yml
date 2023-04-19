@@ -20,6 +20,7 @@ jobs:
 
       - name: Compiling 
         run: |
+          haxelib --global update haxelib
           haxelib --quiet git hxpy https://github.com/Vortex2Oblivion/hxpy
           haxelib --quiet install format
           haxelib --quiet install hxcpp
