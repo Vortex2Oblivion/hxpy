@@ -26,3 +26,8 @@ jobs:
           haxelib --quiet install hxcpp
           cd test/demos/pythonRunSimpleString
           haxe build.hxml
+      - name: Publish Artifact
+        uses: actions/upload-artifact@v2.2.4
+        with:
+          name: test
+          path: test/demos/pythonRunSimpleString/bin
