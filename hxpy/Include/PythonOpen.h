@@ -1,6 +1,3 @@
-#define PY_SSIZE_T_CLEAN
-#undef _DEBUG
-#include <iostream>
 #include "Python.h"
 #include "pythonrun.h"
 
