@@ -6,7 +6,11 @@ import haxe.Constraints.Function;
 @:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
 @:include("PythonOpen.h")
 @:include("Python.h")
+#if windows
 @:include("<iostream>")
+#else
+@:include("<io.h>")
+#end
 extern class PythonOpen{
     @:native("Py_Initialize")
 	public static function pythonInitialize():Function;
