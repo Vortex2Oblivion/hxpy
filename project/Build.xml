@@ -208,6 +208,7 @@
 		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_warnings.h" />
 		<file name="${haxelib:hxpy}/project/python/src/PC/pyconfig.h" />
 		<file name="${haxelib:hxpy}/project/python/src/Modules/_decimal/libmpdec/io.h" />
+		<file name="${haxelib:hxpy}/project/python/src/Modules/_decimal/libmpdec/mpdecimal.h" />
 
 		<include name="${haxelib:hxpy}/project/Defines.xml" />
 	</files>

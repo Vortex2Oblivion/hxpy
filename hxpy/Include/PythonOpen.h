@@ -2,6 +2,7 @@
 #include <io.h>
 #include "Python.h"
 #include "pythonrun.h"
+#include "mpdecimal.h"
 #define CONFIG_64
 
 int pythonRunFunction()
