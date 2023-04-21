@@ -1,4 +1,5 @@
 #include <iostream>
+#include <io.h>
 #include "Python.h"
 #include "pythonrun.h"
 
