@@ -2,7 +2,7 @@
 #include <io.h>
 #include "Python.h"
 #include "pythonrun.h"
-
+#define CONFIG_64
 
 int pythonRunFunction()
 {
