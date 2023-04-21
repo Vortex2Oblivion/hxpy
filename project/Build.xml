@@ -208,6 +208,8 @@
 		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_warnings.h" />
 		<file name="${haxelib:hxpy}/project/python/src/PC/pyconfig.h" />
 		<file name="${haxelib:hxpy}/project/python/src/Modules/_decimal/libmpdec/io.h" />
+
+		<include name="${haxelib:hxlua}/project/Defines.xml" />
 	</files>
 
 	<target id="haxe" tool='linker'>
@@ -220,5 +222,7 @@
 		<compilervalue name="-I" value="${haxelib:hxpy}/project/python/src/PC/" />
 		<compilervalue name="-I" value="${haxelib:hxpy}/project/python/src/Modules/_decimal/libmpdec/" />
 		<compilervalue name="-I" value="${haxelib:hxpy}/libs" />
+
+		<include name="${haxelib:hxlua}/project/Defines.xml" />
 	</files>
 </xml>
