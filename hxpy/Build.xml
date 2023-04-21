@@ -209,7 +209,7 @@
 		<file name="${haxelib:hxpy}/project/python/src/PC/pyconfig.h" />
 		<file name="${haxelib:hxpy}/project/python/src/Modules/_decimal/libmpdec/io.h" />
 
-		<include name="${haxelib:hxlua}/project/Defines.xml" />
+		<include name="${haxelib:hxpy}/project/Defines.xml" />
 	</files>
 
 	<files id="haxe">
@@ -218,7 +218,7 @@
 		<compilervalue name="-I" value="${haxelib:hxpy}/project/python/src/Modules/_decimal/libmpdec/" />
         <compilervalue name="-I" value="${haxelib:hxpy}/libs" />
 
-		<include name="${haxelib:hxlua}/project/Defines.xml" />
+		<include name="${haxelib:hxpy}/project/Defines.xml" />
 	</files>
     <target id="haxe" tool='linker'>
 		<lib name="${haxelib:hxpy}/libs/python3.lib" />
