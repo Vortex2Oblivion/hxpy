@@ -5,8 +5,6 @@ import haxe.Constraints.Function;
 @:buildXml("<include name='${haxelib:hxpy}/project/Build.xml' />")
 @:headerCode("#define PY_SSIZE_T_CLEAN")
 @:include("Python.h")
-@:include("python311.lib")
-@:include("python3.lib")
 @:keep
 extern class Python
 {
