@@ -207,6 +207,7 @@
 		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_unionobject.h" />
 		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_warnings.h" />
 		<file name="${haxelib:hxpy}/project/python/src/PC/pyconfig.h" />
+		<file name="${haxelib:hxpy}/project/python/src/Modules/_decimal/libmpdec/io.h" />
 	</files>
 
 	<files id="haxe">
