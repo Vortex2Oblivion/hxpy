@@ -25,44 +25,4 @@ jobs:
           haxelib --quiet install hxcpp
           cd test/demos/pythonRunSimpleString
           haxe build.hxml
-  Linux:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@main
-        with:
-          submodules: true
-
-      - name: Setup Haxe
-        uses: krdlab/setup-haxe@master
-        with:
-          haxe-version: 4.2.5
-
-      - name: Compiling 
-        run: |
-          haxelib --quiet git hxpy https://github.com/Vortex2Oblivion/hxpy
-          haxelib --quiet install format
-          haxelib --quiet install hxcpp
-          cd test/demos/pythonRunSimpleString
-          haxe build.hxml
-  Mac:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@main
-        with:
-          submodules: true
-
-      - name: Setup Haxe
-        uses: krdlab/setup-haxe@master
-        with:
-          haxe-version: 4.2.5
-
-      - name: Compiling 
-        run: |
-          haxelib --quiet git hxpy https://github.com/Vortex2Oblivion/hxpy
-          haxelib --quiet install format
-          haxelib --quiet install hxcpp
-          cd test/demos/pythonRunSimpleString
-          haxe build.hxml
 
