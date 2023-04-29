@@ -25,11 +25,5 @@ int pythonRunFunction()
 
 int pythonRunSimpleFile()
 {
-    Py_Initialize();
-	FILE* PScriptFile = fopen("script.py", "r");
-	if(PScriptFile){
-		PyRun_SimpleFile(PScriptFile, "script.py");
-		fclose(PScriptFile);
-	}
-    return 0;
+	fopen("script.py", "r");
 }

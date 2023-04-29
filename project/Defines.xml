@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xml>
-	<compilerflag value="-CONFIG_64" if="windows" unless="32bit" />
-	<compilerflag value="-CONFIG_32" if="32bit" />
+
 </xml>
