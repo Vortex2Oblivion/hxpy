@@ -15,9 +15,6 @@ extern class PythonOpen{
     @:native("PyRun_SimpleString")
 	public static function pythonRunSimpleString(s:String):Function;
 
-    @:native("pythonRunSimpleFile")
-	public static function openPythonFile():Function;
-
     @:native("PyRun_SimpleFile")
 	public static function pythonRunSimpleFile(file:Dynamic, f:String):Function;
 

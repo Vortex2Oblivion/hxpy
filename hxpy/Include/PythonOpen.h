@@ -23,7 +23,3 @@ int pythonRunFunction()
 
 }
 
-int pythonRunSimpleFile()
-{
-	fopen("script.py", "r");
-}
