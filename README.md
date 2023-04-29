@@ -20,11 +20,14 @@ haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy.git
 ### Licensing
 
 ![](https://raw.githubusercontent.com/Vortex2Oblivion/hxpy/master/assets/hxpy-logo.png)
+
 **hxpy** is made available under the **MIT License**. Check [LICENSE](./LICENSE) for more information.
 
 ![](https://s3.dualstack.us-east-2.amazonaws.com/pythondotorg-assets/media/files/python-logo-only.svg) 
+
 **Python** is made available under various licenses. Check [The Python Github](https://github.com/python/cpython/blob/main/LICENSE) or [python.org](https://www.python.org/)for more information.
 
 ![](https://haxe.org/img/branding/haxe-logo-glyph.svg)
+
 **Haxe** is made available under various licenses. Check [The Haxe Github](https://github.com/HaxeFoundation/haxe#license)for more information.
 
