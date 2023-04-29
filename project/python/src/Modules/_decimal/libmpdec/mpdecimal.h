@@ -28,6 +28,7 @@
 
 #ifndef LIBMPDEC_MPDECIMAL_H_
 #define LIBMPDEC_MPDECIMAL_H_
+#define CONFIG_64
 
 
 #ifndef _MSC_VER
