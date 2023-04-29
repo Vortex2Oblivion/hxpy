@@ -29,5 +29,5 @@ haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy.git
 
 ![](https://raw.githubusercontent.com/Vortex2Oblivion/hxpy/master/assets/haxe-logo.png)
 
-**Haxe** is made available under various licenses. Check [The Haxe Github](https://github.com/HaxeFoundation/haxe#license)for more information.
+**Haxe** is made available under various licenses. Check [The Haxe Github](https://github.com/HaxeFoundation/haxe#license) for more information.
 
