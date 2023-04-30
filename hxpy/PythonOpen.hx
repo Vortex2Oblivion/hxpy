@@ -4,7 +4,6 @@ import haxe.Constraints.Function;
 
 
 @:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
-@:headerCode("#define CONFIG_64")
 @:include("Python.h")
 @:include("PythonOpen.h")
 
@@ -16,7 +15,7 @@ extern class PythonOpen{
 	public static function pythonRunSimpleString(s:String):Function;
 
     @:native("PyRun_SimpleFile")
-	public static function pythonRunSimpleFile(file:Dynamic, f:String):Function;
+	public static function pythonRunSimpleFile(pscriptfile:String, parsefile:String):Function;
 
     @:native("Py_Finalize")
 	public static function pythonFinalize():Function;
