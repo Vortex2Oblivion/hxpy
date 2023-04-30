@@ -1,1 +1,1 @@
-This is Python version 3.12.0 alpha 6
+This is Python version 3.11.2
