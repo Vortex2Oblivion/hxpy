@@ -1,11 +1,10 @@
 ### hxpy
 
-![](https://raw.githubusercontent.com/Vortex2Oblivion/hxpy/master/assets/hxpy-logo.png)
 
 ![](https://img.shields.io/github/repo-size/Vortex2Oblivion/hxpy) ![](https://badgen.net/github/open-issues/Vortex2Oblivion/hxpy) ![](https://badgen.net/badge/license/MIT/green)
 [![CI](https://img.shields.io/github/actions/workflow/status/Vortex2Oblivion/hxpy/main.yml?branch=master&logo=github)](https://github.com/Vortex2Oblivion/hxpy/actions?query=workflow%3ACI)
 
-![]()
+![](https://raw.githubusercontent.com/Vortex2Oblivion/hxpy/master/assets/hxpy-logo.png)
 
 Haxe/hxcpp @:native bindings for Python
 
