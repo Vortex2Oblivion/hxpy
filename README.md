@@ -16,6 +16,28 @@ For now 'hxpy' is available only via Git. To install please run
 haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy.git
 ```
 
+### Usage
+
+The following code is a very simple usage of hxpy that allows for running Python code from a function
+
+See the ![demos](https://github.com/Vortex2Oblivion/hxpy/tree/master/test/demos) folder for more usage examples
+
+```haxe
+package;
+
+import hxpy.PythonOpen;
+import hxpy.Python;
+
+class Main {
+	public static function main():Void {
+        trace("Python Ver: " + Python.VERSION);
+		PythonOpen.pythonInitialize(); //initializes the python instance
+		PythonOpen.pythonRunSimpleString("print('Hello World From Embedded Python')"); //runs code
+		PythonOpen.pythonFinalize();//closes the python instance
+	}
+}
+```
+
 ### Licensing
 
 ![](https://raw.githubusercontent.com/Vortex2Oblivion/hxpy/master/assets/hxpy-logo.png)
