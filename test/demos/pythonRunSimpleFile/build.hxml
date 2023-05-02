@@ -5,3 +5,5 @@
 -D HXCPP_M64
 -D analyzer-optimize
 --main Main
+--cmd cd bin
+--cmd main.exe
