@@ -4,17 +4,14 @@ package hxpy;
 @:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
 
 @:cppFileCode('
-#include <string>
-#include <iostream>
-
-using std::string;
-using namespace std;
+  #include <Python.h>
 ')
+
 class PythonFile {
   public static function doFile(filetoParse:String) {
     untyped __cpp__('
-      FILE* PScriptFile = fopen(filetoParse.c_str(), "r");
+    FILE* PScriptFile = fopen(filetoParse.c_str(), "r");
+    PyRun_SimpleFile(PScriptFile, filetoParse);
     ');
-    return filetoParse;
   }
 }
