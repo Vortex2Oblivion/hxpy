@@ -10,7 +10,7 @@ class Main {
 	public static function main():Void {
         trace("Python Ver: " + Python.VERSION);
 		PythonOpen.pythonInitialize();
-		PythonFile.doFile("script.py");
+		PythonFile.pythonRunSimpleFile("script.py");
 		PythonOpen.pythonFinalize();
 	}
 }
