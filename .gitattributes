@@ -1,1 +1,2 @@
-project/* linguist-vendored
+project/* linguist-vendored=false
+* text=auto
