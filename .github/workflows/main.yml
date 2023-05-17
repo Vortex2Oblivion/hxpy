@@ -5,7 +5,7 @@ on:
   pull_request:
     branches: [ master ]
 jobs:
-  Build demo 1:
+  demo1:
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -24,7 +24,7 @@ jobs:
           haxelib --quiet install hxcpp
           cd test/demos/pythonRunSimpleString
           haxe build.hxml
-  Build demo 2:
+  demo2:
     runs-on: windows-latest
     steps:
       - name: Checkout
