@@ -1,6 +1,5 @@
 package;
 
-import hxpy.PythonMisc;
 import hxpy.PythonOpen;
 import hxpy.PythonFile;
 import hxpy.Python;
