@@ -35,7 +35,7 @@ extern class Python
 	static var RELEASE_LEVEL:String;
     /**
      * Release serial number
-     */
+     */ 
     @:native('::String(PY_RELEASE_SERIAL)')
 	static var RELEASE_SERIAL:String;
 }
