@@ -2,7 +2,7 @@
     "name": "hxpy",
     "url" : "https://github.com/Vortex2Oblivion/hxpy",
     "license": "MIT",
-    "tags": ["hxcpp", "bindings", "python"],
+    "tags": ["hxcpp", "cpp", "bindings", "native", "python"],
     "description": "Haxe/hxcpp @:native bindings for Python",
     "version": "0.0.1",
     "releasenote": "Work In Progress",
