@@ -28,7 +28,8 @@ class PythonFile {
    */
   public static function pythonRunSimpleFile(filetoParse:String) {
     untyped __cpp__('
-    FILE* PScriptFile = fopen(filetoParse.c_str(), "r");
+    PyObject *obj = Py_BuildValue("s", filetoParse.c_str());
+    FILE* PScriptFile = _Py_fopen_obj(obj, "r+");
     if(PScriptFile){
       PyRun_SimpleFile(PScriptFile, filetoParse);
       fclose(PScriptFile);
