@@ -6,7 +6,6 @@ import haxe.Constraints.Function;
 
 @:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
 @:include("Python.h")
-@:include("PythonOpen.h")
 /**
  * Basic class for doing most stuff in hxpy
  */
