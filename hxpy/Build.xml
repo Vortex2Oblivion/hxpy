@@ -209,13 +209,11 @@
 		<file name="${haxelib:hxpy}/project/python/src/PC/pyconfig.h" />
 		<file name="${haxelib:hxpy}/project/python/src/Modules/_decimal/libmpdec/io.h" />
 		<file name="${haxelib:hxpy}/project/python/src/Modules/_decimal/libmpdec/mpdecimal.h" />
-		<file name="${haxelib:hxpy}/hxpy/include/PythonOpen.h" />
 
 		<include name="${haxelib:hxpy}/project/Defines.xml" />
 	</files>
 
 	<files id="haxe">
-		<compilervalue name="-I" value="${haxelib:hxpy}/hxpy/Include/" />
 		<compilervalue name="-I" value="${haxelib:hxpy}/project/python/src/PC/" />
 		<compilervalue name="-I" value="${haxelib:hxpy}/project/python/src/Modules/_decimal/libmpdec/" />
         <compilervalue name="-I" value="${haxelib:hxpy}/libs" />

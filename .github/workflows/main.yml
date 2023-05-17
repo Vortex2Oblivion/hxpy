@@ -5,7 +5,7 @@ on:
   pull_request:
     branches: [ master ]
 jobs:
-  Build:
+  Build demo 1:
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -23,5 +23,24 @@ jobs:
           haxelib --quiet git hxpy https://github.com/Vortex2Oblivion/hxpy
           haxelib --quiet install hxcpp
           cd test/demos/pythonRunSimpleString
+          haxe build.hxml
+  Build demo 2:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: true
+
+      - name: Setup Haxe
+        uses: krdlab/setup-haxe@master
+        with:
+          haxe-version: 4.3.1
+
+      - name: Compiling 
+        run: |
+          haxelib --quiet git hxpy https://github.com/Vortex2Oblivion/hxpy
+          haxelib --quiet install hxcpp
+          cd test/demos/pythonRunSimpleFile
           haxe build.hxml
 
