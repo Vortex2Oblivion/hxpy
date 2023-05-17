@@ -1,5 +1,7 @@
 package hxpy;
 
+import haxe.Constraints.Function;
+
 @:buildXml("<include name='${haxelib:hxpy}/project/Build.xml' />")
 @:include("Python.h")
 @:keep
@@ -38,4 +40,10 @@ extern class Python
      */ 
     @:native('::String(PY_RELEASE_SERIAL)')
 	static var RELEASE_SERIAL:String;
+
+    /**
+    *Function for tracing the Python copyright information.
+    */
+    @:native("Py_GetCopyright")
+	public static function pythonGetCopyright():String;
 }
