@@ -23,8 +23,8 @@ using namespace std;
  */
 class PythonFile {
   /**
-   * Function for loading python code from a file
-   * @param filetoParse The name of the file to run. (eg: script.py)
+   * Function for loading Python code from a file.
+   * @param filetoParse The path of your Python script. (eg: script.py)
    */
   public static function pythonRunSimpleFile(filetoParse:String) {
     untyped __cpp__('
