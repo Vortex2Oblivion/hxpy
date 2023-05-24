@@ -1,2 +1,5 @@
 package hxpy;
 
+class PythonExtend {
+    
+}
