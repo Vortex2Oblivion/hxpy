@@ -1,2 +1,5 @@
-project/* linguist-vendored=false
+# Auto detect text files and perform LF normalization
 * text=auto
+
+# Don't count Python source and C API as actual code
+project/** linguist-vendored
