@@ -1,5 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 
-# Don't count Python source and C API as actual code
+# Don't count Python C API and demos as actual code
 project/** linguist-vendored
+test/** linguist-vendored
