@@ -1,7 +1,5 @@
 package hxpy;
 
-import haxe.Constraints.Function;
-
 @:buildXml("<include name='${haxelib:hxpy}/project/Build.xml' />")
 @:include("Python.h")
 @:keep

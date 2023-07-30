@@ -1,7 +1,6 @@
 package hxpy; 
 
 
-import haxe.Constraints.Function;
 
 
 @:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
@@ -14,18 +13,18 @@ extern class PythonOpen{
     *Function for initializing the Python interpreter.
     */
     @:native("Py_Initialize")
-	public static function pythonInitialize():Function;
+	public static function pythonInitialize():Void;
 
     /**
     *Function for loading Python code from a string.
     @param pycode The actual Python code that is going to be run.
     */
     @:native("PyRun_SimpleString")
-	public static function pythonRunSimpleString(pycode:String):Function;
+	public static function pythonRunSimpleString(pycode:String):Void;
 
     /**
     *Function for closing a Python instance.
     */
     @:native("Py_Finalize")
-	public static function pythonFinalize():Function;
+	public static function pythonFinalize():Void;
 }
