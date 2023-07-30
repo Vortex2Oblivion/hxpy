@@ -12,9 +12,9 @@ class Main {
 	public static function main():Void {
 		//tracing some basic copyright and version information
         trace("Python Ver: " + Python.VERSION);
-		SpamModule.spam_system();
+		SpamModule.spam_system(null,null);
 		PythonOpen.pythonInitialize(); // Initializes python
-		PythonFile.pythonRunSimpleFile(/*path to script file*/"script.py"); // runs code
+		PythonFile.pythonRunSimpleFile("script.py"); // runs code
 		PythonOpen.pythonFinalize(); //  closes python
 	}
 }
