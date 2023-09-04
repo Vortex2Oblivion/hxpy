@@ -10,8 +10,11 @@ Haxe/hxcpp @:native bindings for Python
 
 ### Installation
 
-For now 'hxpy' is available only via Git. To install please run
-
+via haxelib
+```bash
+haxelib install hxpy
+```
+via git for the latest updates
 ```bash
 haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy.git
 ```
