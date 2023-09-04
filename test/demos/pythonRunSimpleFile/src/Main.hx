@@ -4,8 +4,6 @@ import hxpy.PythonOpen;
 import hxpy.PythonFile;
 import hxpy.Python;
 
-
-
 class Main {
 	public static function main():Void {
 		//tracing some version information.

@@ -225,6 +225,9 @@
 		<compilervalue name="-I" value="${haxelib:hxpy}/project/python/src/Python/" />
 		<compilervalue name="-I" value="${haxelib:hxpy}/project/python/src/Modules/_decimal/libmpdec/" />
 		<compilervalue name="-I" value="${haxelib:hxpy}/libs" />
+		<compilervalue name="-D" value="CONFIG_64"/>
+		<!---uncomment this line if you wanna build for 32 bit-->
+		<!--compilervalue name="-D" value="CONFIG_32"/-->
 
 		<include name="${haxelib:hxpy}/project/Defines.xml" />
 	</files>
