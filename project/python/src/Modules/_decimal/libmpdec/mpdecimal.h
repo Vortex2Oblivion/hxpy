@@ -28,8 +28,7 @@
 
 #ifndef LIBMPDEC_MPDECIMAL_H_
 #define LIBMPDEC_MPDECIMAL_H_
-//im just doing this for now because working is fun
-#define CONFIG_64
+
 
 
 #ifndef _MSC_VER
