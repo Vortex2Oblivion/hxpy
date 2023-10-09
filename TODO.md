@@ -4,6 +4,4 @@
 
 -add the ability to extend python
 
--switch the python c api to use that thing where github downloads a branch
-
 -other stuff
