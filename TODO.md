@@ -4,4 +4,4 @@
 
 -add the ability to extend python
 
--other stuff
+-include the python embedable package in haxelib
