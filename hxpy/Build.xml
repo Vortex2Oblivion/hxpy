@@ -209,8 +209,6 @@
 		<file name="${haxelib:hxpy}/project/python/src/PC/pyconfig.h" />
 		<file name="${haxelib:hxpy}/project/python/src/Modules/_decimal/libmpdec/io.h" />
 		<file name="${haxelib:hxpy}/project/python/src/Modules/_decimal/libmpdec/mpdecimal.h" />
-
-		<include name="${haxelib:hxpy}/project/Defines.xml" />
 	</files>
 
 	<files id="haxe">
@@ -219,13 +217,19 @@
 		<compilervalue name="-I" value="${haxelib:hxpy}/project/python/src/Python/" />
 		<compilervalue name="-I" value="${haxelib:hxpy}/project/python/src/Modules/_decimal/libmpdec/" />
         <compilervalue name="-I" value="${haxelib:hxpy}/libs" />
-
-		<include name="${haxelib:hxpy}/project/Defines.xml" />
+		<compilervalue name="-D" value="CONFIG_64"/>
+		<compilervalue name="-D" value="_DEBUG" if="debug" />
 	</files>
+
     <target id="haxe" tool='linker'>
 		<lib name="${haxelib:hxpy}/libs/python3.lib" />
 		<lib name="${haxelib:hxpy}/libs/python311.lib" />
+		<lib name="${haxelib:hxpy}/libs/_tkinter.lib" />
+
+		<lib name="${haxelib:hxpy}/libs/python3_d.lib" if="debug" />
+		<lib name="${haxelib:hxpy}/libs/python311_d.lib" if="debug" />
 	</target>
+
 	<copyFile name="_asyncio.pyd" from="${haxelib:hxpy}/package" toolId="exe" />
 	<copyFile name="_bz2.pyd" from="${haxelib:hxpy}/package" toolId="exe" />
 	<copyFile name="_ctypes.pyd" from="${haxelib:hxpy}/package" toolId="exe" />
