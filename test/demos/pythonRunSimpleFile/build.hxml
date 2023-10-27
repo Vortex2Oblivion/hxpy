@@ -2,7 +2,6 @@
 --cpp bin/
 --library hxpy
 --dce full
--debug
 -D HXCPP_M64
 -D CONFIG_64
 -D analyzer-optimize
