@@ -6,3 +6,4 @@
 -D CONFIG_64
 -D analyzer-optimize
 --main Main
+--debug
