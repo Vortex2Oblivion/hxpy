@@ -7,6 +7,8 @@
 ![](https://raw.githubusercontent.com/Vortex2Oblivion/hxpy/master/assets/hxpy-logo.png)
 
 Haxe/hxcpp @:native bindings for Python
+This library works on the C++ target only!
+(Windows only as of now. Mac and Linux might work but they are untested!)
 
 ### Installation
 
