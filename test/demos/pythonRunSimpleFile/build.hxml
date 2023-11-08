@@ -3,7 +3,5 @@
 --library hxpy
 --dce full
 -D HXCPP_M64
--D CONFIG_64
 -D analyzer-optimize
 --main Main
---debug
