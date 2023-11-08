@@ -263,4 +263,5 @@
 	<copyFile name="vcruntime140_1.dll" from="${haxelib:hxpy}/package" toolId="exe" />
 	<copyFile name="vcruntime140.dll" from="${haxelib:hxpy}/package" toolId="exe" />
 	<copyFile name="winsound.pyd" from="${haxelib:hxpy}/package" toolId="exe" />
+	<assets path="package" rename="" if="lime">
 </xml>
