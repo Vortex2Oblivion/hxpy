@@ -32,16 +32,17 @@ With a file:
 ```haxe
 package;
 
-import hxpy.PythonOpen;
+import hxpy.Python;
+import hxpy.Python.File;
 
 class Main {
 	public static function main():Void {
 		//initializes the python instance
-		PythonOpen.pythonInitialize();
+		Python.initialize();
 		 //runs code               path to script file
-		PythonFile.pythonRunSimpleFile("script.py");
+		File.runSimpleFile("script.py");
 		//closes the python instance
-		PythonOpen.pythonFinalize();
+		Python.finalize();
 	}
 }
 ```
@@ -51,16 +52,16 @@ Without a file:
 ```haxe
 package;
 
-import hxpy.PythonOpen;
+import hxpy.Python;
 
 class Main {
 	public static function main():Void {
 		//initializes the python instance
-		PythonOpen.pythonInitialize();
-		 //runs code
-		PythonOpen.pythonRunSimpleString("print('Hello World From Embedded Python')");
+		Python.initialize();
+		//runs code
+		Python.runSimpleString("print('Hello World From Embedded Python')");
 		//closes the python instance
-		PythonOpen.pythonFinalize();
+		Python.finalize();
 	}
 }
 ```
