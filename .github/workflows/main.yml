@@ -16,13 +16,12 @@ jobs:
       - name: Setup Haxe
         uses: krdlab/setup-haxe@master
         with:
-          haxe-version: 4.3.1
+          haxe-version: 4.3.2
 
       - name: Compiling 
         run: |
           haxelib --quiet git hxpy https://github.com/Vortex2Oblivion/hxpy
-          haxelib --quiet install hxcpp
-          cd test/demos/pythonRunSimpleString
+          cd "test/demos/running code without a file"
           haxe build.hxml
   demo2:
     runs-on: windows-latest
@@ -35,12 +34,11 @@ jobs:
       - name: Setup Haxe
         uses: krdlab/setup-haxe@master
         with:
-          haxe-version: 4.3.1
+          haxe-version: 4.3.2
 
       - name: Compiling 
         run: |
           haxelib --quiet git hxpy https://github.com/Vortex2Oblivion/hxpy
-          haxelib --quiet install hxcpp
-          cd test/demos/pythonRunSimpleFile
+          cd "test/demos/running code from a file"
           haxe build.hxml
 
