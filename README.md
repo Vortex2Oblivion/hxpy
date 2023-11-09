@@ -25,22 +25,42 @@ haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy.git
 
 ### Usage
 
-The following code is a very simple usage of hxpy that allows for running Python code from a function
-
 See the ![demos](https://github.com/Vortex2Oblivion/hxpy/tree/master/test/demos) folder for more usage examples
+
+With a file:
 
 ```haxe
 package;
 
 import hxpy.PythonOpen;
-import hxpy.Python;
 
 class Main {
 	public static function main():Void {
-        	trace("Python Ver: " + Python.VERSION);
-		PythonOpen.pythonInitialize(); //initializes the python instance
-		PythonOpen.pythonRunSimpleString("print('Hello World From Embedded Python')"); //runs code
-		PythonOpen.pythonFinalize();//closes the python instance
+		//initializes the python instance
+		PythonOpen.pythonInitialize();
+		 //runs code               path to script file
+		PythonFile.pythonRunSimpleFile("script.py");
+		//closes the python instance
+		PythonOpen.pythonFinalize();
+	}
+}
+```
+
+Without a file:
+
+```haxe
+package;
+
+import hxpy.PythonOpen;
+
+class Main {
+	public static function main():Void {
+		//initializes the python instance
+		PythonOpen.pythonInitialize();
+		 //runs code
+		PythonOpen.pythonRunSimpleString("print('Hello World From Embedded Python')");
+		//closes the python instance
+		PythonOpen.pythonFinalize();
 	}
 }
 ```
