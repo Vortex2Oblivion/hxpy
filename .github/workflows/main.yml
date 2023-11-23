@@ -5,8 +5,46 @@ on:
   pull_request:
     branches: [ master ]
 jobs:
-  demo1:
+  demo1win:
     runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: true
+
+      - name: Setup Haxe
+        uses: krdlab/setup-haxe@master
+        with:
+          haxe-version: 4.3.2
+
+      - name: Compiling 
+        run: |
+          haxelib --quiet git hxpy https://github.com/Vortex2Oblivion/hxpy
+          cd "test/demos/running code without a file"
+          haxe build.hxml
+          
+  demo1mac:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: true
+
+      - name: Setup Haxe
+        uses: krdlab/setup-haxe@master
+        with:
+          haxe-version: 4.3.2
+
+      - name: Compiling 
+        run: |
+          haxelib --quiet git hxpy https://github.com/Vortex2Oblivion/hxpy
+          cd "test/demos/running code without a file"
+          haxe build.hxml
+          
+  demo1linux:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@main
