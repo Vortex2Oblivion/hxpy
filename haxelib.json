@@ -6,7 +6,7 @@
     "description": "Haxe/hxcpp @:native bindings for Python",
     "version": "1.0.0",
     "releasenote": "Cleaned some stuff up, Added mac/linux support hopefully",
-    "contributors": ["Vortex", "JonnycatMeow"],
+    "contributors": ["Vortex"],
     "dependencies": {
       "hxcpp": ""
     }
