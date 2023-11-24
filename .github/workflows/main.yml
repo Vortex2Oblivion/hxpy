@@ -42,40 +42,4 @@ jobs:
           haxelib --quiet git hxpy https://github.com/Vortex2Oblivion/hxpy
           cd "test/demos/running code from a file"
           haxe build.hxml
-  demo1mac:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@main
-        with:
-          submodules: true
-
-      - name: Setup Haxe
-        uses: krdlab/setup-haxe@master
-        with:
-          haxe-version: 4.3.2
-
-      - name: Compiling 
-        run: |
-          haxelib --quiet git hxpy https://github.com/Vortex2Oblivion/hxpy
-          cd "test/demos/running code without a file"
-          haxe build.hxml
-          
-  demo2mac:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@main
-        with:
-          submodules: true
-
-      - name: Setup Haxe
-        uses: krdlab/setup-haxe@master
-        with:
-          haxe-version: 4.3.2
-
-      - name: Compiling 
-        run: |
-          haxelib --quiet git hxpy https://github.com/Vortex2Oblivion/hxpy
-          cd "test/demos/running code from a file"
-          haxe build.hxml
+  
