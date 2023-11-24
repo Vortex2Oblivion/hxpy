@@ -4,9 +4,9 @@
     "license": "MIT",
     "tags": ["hxcpp", "cpp", "bindings", "native", "python"],
     "description": "Haxe/hxcpp @:native bindings for Python",
-    "version": "0.0.1",
-    "releasenote": "Work In Progress",
-    "contributors": ["Vortex"],
+    "version": "1.0.0",
+    "releasenote": "Cleaned some stuff up, Added mac/linux support hopefully",
+    "contributors": ["Vortex", "JonnycatMeow"],
     "dependencies": {
       "hxcpp": ""
     }
