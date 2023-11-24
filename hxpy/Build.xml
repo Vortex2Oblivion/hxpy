@@ -231,7 +231,11 @@
 		</section>
 
 		<section if="macos">  
-		<lib name="${haxelib:hxpy}/libs/macOS/x86_64/libpython3.11.a" if="HXCPP_M64"/>
+		<lib name="${haxelib:hxpy}/libs/macOS/x86_64/libpython3.11.a" if="HXCPP_M64"/> <!--non debug-->
+		</section> 
+
+		<section if="linux">  
+		<lib name="${haxelib:hxpy}/libs/Linux/libpython3.11.a" if="HXCPP_M64"/> <!--non debug-->
 		</section>
 	</target>
 
