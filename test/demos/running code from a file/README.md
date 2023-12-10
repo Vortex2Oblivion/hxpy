@@ -1,4 +1,4 @@
-# pythonRunSimpleFile
+# running code from a file
 
 This demo is to showcase the ability to run a python script from a file. No extending yet!
 ## Status
