@@ -13,16 +13,19 @@ extern class Python
      */
     @:native('::String(PY_VERSION)')
 	static var VERSION:String;
+
     /**
      * Major version number
      */
     @:native('::String(PY_MAJOR_VERSION)')
 	static var VERSION_MAJOR:String;
+
     /**
      * Minor version number
      */
     @:native('::String(PY_MINOR_VERSION)')
 	static var VERSION_MINOR:String;
+
     /**
      * Micro version number
      */
@@ -33,6 +36,7 @@ extern class Python
      */
     @:native('::String(PY_RELEASE_LEVEL)')
 	static var RELEASE_LEVEL:String;
+
     /**
      * Release serial number
      */ 
