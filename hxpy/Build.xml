@@ -255,7 +255,7 @@
 	<copyFile name="_sqlite3.pyd" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
 	<copyFile name="_ssl.pyd" from="${haxelib:hxpy}/package/Windows/" toolId="exe" />
 	<copyFile name="_uuid.pyd" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="_zoneinfo.pyd" from="${haxelib:hxpy}/package" toolId="exe" />
+	<copyFile name="_zoneinfo.pyd" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
 	<copyFile name="libcrypto-1_1.dll" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
 	<copyFile name="libffi-8.dll" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
 	<copyFile name="LICENSE.txt" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
