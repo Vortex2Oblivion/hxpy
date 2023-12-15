@@ -72,7 +72,7 @@ class Main {
 
 ![](https://raw.githubusercontent.com/Vortex2Oblivion/hxpy/master/assets/python-logo.png)
 
-**Python** is made available under various licenses. Check [The Python Github](https://github.com/python/cpython/blob/main/LICENSE) or [python.org](https://www.python.org/)for more information.
+**Python** is made available under various licenses. Check [The Python Github](https://github.com/python/cpython/blob/main/LICENSE) or [python.org](https://www.python.org/) for more information.
 
 ![](https://raw.githubusercontent.com/Vortex2Oblivion/hxpy/master/assets/haxe-logo.png)
 
