@@ -68,6 +68,10 @@ extern class Python
   */
 	public static inline function runSimpleFile(filetoParse:String):Void {
       untyped __cpp__('
+				#include <string>
+				#include <iostream>
+				using std::string;
+				using namespace std;
 	      PyObject *obj = Py_BuildValue("s", filetoParse.c_str());
 	      FILE* PScriptFile = _Py_fopen_obj(obj, "r+");
 	      if(PScriptFile){
