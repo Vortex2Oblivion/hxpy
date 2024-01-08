@@ -47,20 +47,20 @@ extern class Python
     *Function for tracing the Python copyright information.
     */
     @:native("Py_GetCopyright")
-	public static inline function getCopyright():String;
+	public static function getCopyright():String;
 
     /**
     *Function for initializing the Python interpreter.
     */
     @:native("Py_Initialize")
-	public static inline function initialize():Void;
+	public static function initialize():Void;
 
     /**
     *Function for loading Python code from a string.
     @param pycode The actual Python code that is going to be run.
     */
     @:native("PyRun_SimpleString")
-	public static inline function runSimpleString(pycode:String):Void;
+	public static function runSimpleString(pycode:String):Void;
 
 	/**
      * Function for loading Python code from a file.
