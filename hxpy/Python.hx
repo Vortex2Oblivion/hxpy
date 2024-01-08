@@ -2,6 +2,12 @@ package hxpy;
 
 @:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
 @:include("Python.h")
+@:cppFileCode('
+#include <string>
+#include <iostream>
+using std::string;
+using namespace std;
+')
 @:keep
 /**
  * Class that contains most of the variables and functions in hxpy!
@@ -68,10 +74,6 @@ extern class Python
   */
 	public static inline function runSimpleFile(filetoParse:String):Void {
       untyped __cpp__('
-				#include <string>
-				#include <iostream>
-				using std::string;
-				using namespace std;
 	      PyObject *obj = Py_BuildValue("s", filetoParse.c_str());
 	      FILE* PScriptFile = _Py_fopen_obj(obj, "r+");
 	      if(PScriptFile){
