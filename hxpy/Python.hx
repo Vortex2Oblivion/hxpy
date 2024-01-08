@@ -72,8 +72,8 @@ extern class Python
      * Function for loading Python code from a file.
      * @param filetoParse The path of your Python script. (eg: script.py)
   */
-	public static inline function runSimpleFile(filetoParse:String):Void {
-      untyped __cpp__('
+	public static function runSimpleFile(filetoParse:String):Void {
+      return untyped __cpp__('
 	      PyObject *obj = Py_BuildValue("s", filetoParse.c_str());
 	      FILE* PScriptFile = _Py_fopen_obj(obj, "r+");
 	      if(PScriptFile){
