@@ -47,20 +47,38 @@ extern class Python
     *Function for tracing the Python copyright information.
     */
     @:native("Py_GetCopyright")
-	public static function getCopyright():String;
+	public static inline function getCopyright():String;
 
     /**
     *Function for initializing the Python interpreter.
     */
     @:native("Py_Initialize")
-	public static function initialize():Void;
+	public static inline function initialize():Void;
 
     /**
     *Function for loading Python code from a string.
     @param pycode The actual Python code that is going to be run.
     */
     @:native("PyRun_SimpleString")
-	public static function runSimpleString(pycode:String):Void;
+	public static inline function runSimpleString(pycode:String):Void;
+
+	/**
+     * Function for loading Python code from a file.
+     * @param filetoParse The path of your Python script. (eg: script.py)
+  */
+	public static inline function runSimpleFile(filetoParse:String):Void; {
+      untyped __cpp__('
+	      PyObject *obj = Py_BuildValue("s", filetoParse.c_str());
+	      FILE* PScriptFile = _Py_fopen_obj(obj, "r+");
+	      if(PScriptFile){
+	        PyRun_SimpleFile(PScriptFile, filetoParse);
+	        fclose(PScriptFile);
+	      }
+	      else{
+	        std::cout << "File Not Found!";
+	      } 
+	    ');
+    }
 
     /**
     *Function for closing a Python instance.
