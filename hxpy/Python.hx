@@ -2,12 +2,6 @@ package hxpy;
 
 @:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
 @:include("Python.h")
-@:cppFileCode('
-#include <string>
-#include <iostream>
-using std::string;
-using namespace std;
-')
 @:keep
 /**
  * Class that contains most of the variables and functions in hxpy!
@@ -72,19 +66,10 @@ extern class Python
      * Function for loading Python code from a file.
      * @param filetoParse The path of your Python script. (eg: script.py)
   */
-	public static function runSimpleFile(filetoParse:String):Void {
-      return untyped __cpp__('
-	      PyObject *obj = Py_BuildValue("s", filetoParse.c_str());
-	      FILE* PScriptFile = _Py_fopen_obj(obj, "r+");
-	      if(PScriptFile){
-	        PyRun_SimpleFile(PScriptFile, filetoParse);
-	        fclose(PScriptFile);
-	      }
-	      else{
-	        std::cout << "File Not Found!";
-	      } 
-	    ');
-    }
+	public static inline function runSimpleFile(filetoParse:String):Void {
+      @:privateAccess
+      File.runSimpleFile(filetoParse);
+  }
 
     /**
     *Function for closing a Python instance.
@@ -105,21 +90,15 @@ extern class Python
 #endif
 #include <string>
 #include <iostream>
-#include <pythonrun.h>
 using std::string;
 using namespace std;
 ')
-/**
- * Class that contains the function for running code from a file
- * Cuz you cant use untyped cpp in extern classes. a.
- * I don't know what any of this means lmao.
- */
 class File {
     /**
      * Function for loading Python code from a file.
      * @param filetoParse The path of your Python script. (eg: script.py)
      */
-    public static function runSimpleFile(filetoParse:String) {
+    private static function runSimpleFile(filetoParse:String) {
       untyped __cpp__('
       PyObject *obj = Py_BuildValue("s", filetoParse.c_str());
       FILE* PScriptFile = _Py_fopen_obj(obj, "r+");
