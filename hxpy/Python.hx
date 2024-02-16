@@ -1,5 +1,7 @@
 package hxpy;
 
+import cpp.Callable;
+
 @:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
 @:include("Python.h")
 @:keep
@@ -69,8 +71,8 @@ extern class Python
 	public static inline function runSimpleFile(filetoParse:String):Void {
       @:privateAccess
       File.runSimpleFile(filetoParse);
-  }
-
+  	}
+		
     /**
     *Function for closing a Python instance.
     */
@@ -82,33 +84,34 @@ extern class Python
 @:cppFileCode('
 #define PY_SSIZE_T_CLEAN
 #ifdef _DEBUG
-  #undef _DEBUG
-  #include <Python.h>
-  #define _DEBUG
+	#undef _DEBUG
+	#include <Python.h>
+	#define _DEBUG
 #else
-  #include <Python.h>
+	#include <Python.h>
 #endif
 #include <string>
 #include <iostream>
 using std::string;
 using namespace std;
 ')
+@:keep
 class File {
     /**
      * Function for loading Python code from a file.
      * @param filetoParse The path of your Python script. (eg: script.py)
      */
-    private static function runSimpleFile(filetoParse:String) {
-      untyped __cpp__('
-      PyObject *obj = Py_BuildValue("s", filetoParse.c_str());
-      FILE* PScriptFile = _Py_fopen_obj(obj, "r+");
-      if(PScriptFile){
-        PyRun_SimpleFile(PScriptFile, filetoParse);
-        fclose(PScriptFile);
-      }
-      else{
-        std::cout << "File Not Found!";
-      } 
-    ');
-    }
-  }
+	private static function runSimpleFile(filetoParse:String) {
+    	untyped __cpp__('
+      		PyObject *obj = Py_BuildValue("s", filetoParse.c_str());
+      		FILE* PScriptFile = _Py_fopen_obj(obj, "r+");
+      		if(PScriptFile){
+    			PyRun_SimpleFile(PScriptFile, filetoParse);
+        		fclose(PScriptFile);
+      		}
+      		else{
+        		std::cout << "File Not Found!";
+    		} 
+		');
+	}
+}

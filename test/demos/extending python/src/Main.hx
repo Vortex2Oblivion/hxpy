@@ -1,14 +1,14 @@
 package;
 
 import hxpy.Python;
-import hxpy.Python.File;
+import hxpy.Python;
 
 class Main {
 	public static function main():Void {
 		//initializes the python instance
 		Python.initialize();
-		 //runs code               path to script file
-		File.runSimpleFile("script.py");
+		 //runs code     path to script file
+		Python.runSimpleFile("script.py");
 		//closes the python instance
 		Python.finalize();
 	}
