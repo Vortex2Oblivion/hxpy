@@ -70,7 +70,7 @@ extern class Python
   */
 	public static inline function runSimpleFile(filetoParse:String):Void {
       @:privateAccess
-      File.runSimpleFile(filetoParse);
+      PythonFile.runSimpleFile(filetoParse);
   	}
 		
     /**
@@ -96,7 +96,7 @@ using std::string;
 using namespace std;
 ')
 @:keep
-class File {
+class PythonFile {
     /**
      * Function for loading Python code from a file.
      * @param filetoParse The path of your Python script. (eg: script.py)
