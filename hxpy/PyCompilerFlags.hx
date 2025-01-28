@@ -1,0 +1,5 @@
+package hxpy;
+
+class PyCompilerFlags {
+    
+}

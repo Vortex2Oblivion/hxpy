@@ -1,0 +1,3 @@
+--library hxpy
+--cpp test/bin
+--class-path test/src
