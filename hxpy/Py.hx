@@ -10,11 +10,10 @@ import cpp.ConstCharStar;
 @:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
 @:include("Python.h")
 @:keep
-@:publicFields
 /**
  * Class that contains most of the variables and functions in hxpy!
  */
-extern class Python
+extern class Py
 {
     /**
      * Python version as a whole
@@ -27,12 +26,9 @@ extern class Python
 
     @:native('Py_InitializeFromConfig')
 	static function initializeFromConfig(config:RawPointer<PyConfig>):PyStatus;
-
-    @:native('PyRun_SimpleString')
-	static function runSimpleString(command:ConstCharStar):Int;
-
-    @:native('PyRun_SimpleStringFlags')
-	static function runSimpleStringFlags(command:ConstCharStar, flags:RawPointer<PyCompilerFlags>):Int;
+    
+    @:native('Py_BuildValue')
+	static function buildValue(a:ConstCharStar, b:ConstCharStar):RawPointer<PyObject>;
 
     @:native('PyConfig_Clear')
 	static function configClear(config:RawPointer<PyConfig>):Void;

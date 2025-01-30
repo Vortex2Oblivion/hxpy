@@ -1,10 +1,15 @@
 package;
 
+import hxpy.FileUtils;
+import hxpy.PyObject;
+import cpp.FILE;
+import cpp.NativeFile;
+import hxpy.PyRun;
 import cpp.RawConstPointer;
 import hxpy.WChar;
 import hxpy.PyConfig;
 import hxpy.PyStatus;
-import hxpy.Python;
+import hxpy.Py;
 
 using cpp.RawPointer;
 using hxpy.WChar;
@@ -14,29 +19,33 @@ class Main {
 	static var config:PyConfig;
 
 	static function main() {
-		Python.initConfig(config.addressOf());
-		Python.setBytesString(config.addressOf(), config.program_name.toWChar(), Sys.args()[0]);
+		Py.initConfig(config.addressOf());
+		Py.setBytesString(config.addressOf(), config.program_name.toWChar(), Sys.args()[0]);
 
-		if (Python.exception(status) == 1) {
+		if (Py.exception(status) == 1) {
 			exception();
 		}
 
-		status = Python.initializeFromConfig(config.addressOf());
+		status = Py.initializeFromConfig(config.addressOf());
 
-		if (Python.exception(status) == 1) {
+		if (Py.exception(status) == 1) {
 			exception();
 		}
 
-		Python.configClear(config.addressOf());
+		Py.configClear(config.addressOf());
 
-		Python.runSimpleString("from time import time,ctime\n" + "print('Today is', ctime(time()))\n");
-		if(Python.finalizeEx() < 0){
+		var obj:RawPointer<PyObject> = Py.buildValue("s", "script.py");
+		var file:RawPointer<hxpy.FILE> = FileUtils._Py_fopen_obj(obj, "r+");
+		if (file != null) {
+			PyRun.simpleFile(file, "script.py");
+		}
+		if (Py.finalizeEx() < 0) {
 			Sys.exit(120);
 		};
 	}
 
 	static function exception() {
-		Python.configClear(config.addressOf());
-		Python.exitStatusException(status);
+		Py.configClear(config.addressOf());
+		Py.exitStatusException(status);
 	}
 }
