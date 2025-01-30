@@ -33,6 +33,6 @@
 				<lib name="python313t.lib" />
 			</section>
 		</target>
-
+		<compilerflag  name="-DPy_DEBUG" if="debug" />
 	</section>
 </xml>
