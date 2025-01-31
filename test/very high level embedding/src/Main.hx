@@ -17,10 +17,11 @@ using hxpy.WChar;
 class Main {
 	static var status:PyStatus;
 	static var config:PyConfig;
-
 	static function main() {
-		Py.initConfig(config.addressOf());
-		Py.setBytesString(config.addressOf(), config.program_name.toWChar(), Sys.args()[0]);
+
+
+		PyConfig.initConfig(config.addressOf());
+		PyConfig.setBytesString(config.addressOf(), config.program_name.toWChar(), Sys.args()[0]);
 
 		if (Py.exception(status) == 1) {
 			exception();
@@ -32,20 +33,16 @@ class Main {
 			exception();
 		}
 
-		Py.configClear(config.addressOf());
+		PyConfig.configClear(config.addressOf());
 
-		var obj:RawPointer<PyObject> = Py.buildValue("s", "script.py");
-		var file:RawPointer<hxpy.FILE> = FileUtils._Py_fopen_obj(obj, "r+");
-		if (file != null) {
-			PyRun.simpleFile(file, "script.py");
-		}
+		PyRun.simpleString("from time import time,ctime\n" + "print('Today is', ctime(time()))\n");
 		if (Py.finalizeEx() < 0) {
 			Sys.exit(120);
 		};
 	}
 
 	static function exception() {
-		Py.configClear(config.addressOf());
-		Py.exitStatusException(status);
+		PyConfig.configClear(config.addressOf());
+		PyConfig.exitStatusException(status);
 	}
 }
