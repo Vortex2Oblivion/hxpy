@@ -10,9 +10,6 @@ import cpp.ConstCharStar;
 @:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
 @:include("Python.h")
 @:keep
-/**
- * Class that contains most of the variables and functions in hxpy!
- */
 extern class Py
 {
     /**
@@ -41,4 +38,7 @@ extern class Py
 
     @:native('Py_DECREF')
 	static function DECREF(o:RawPointer<PyObject>):Void;
+
+    @:native('Py_XDECREF')
+	static function XDECREF(o:RawPointer<PyObject>):Void;
 }

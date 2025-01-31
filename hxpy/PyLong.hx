@@ -8,4 +8,7 @@ import cpp.RawPointer;
 extern class PyLong {
 	@:native('PyLong_FromLong')
 	static function fromLong(v:Int):RawPointer<PyObject>;
+
+	@:native('PyLong_AsLong')
+	static function asLong(obj:RawPointer<PyObject>):Int;
 }
