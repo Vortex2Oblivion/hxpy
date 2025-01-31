@@ -1,4 +1,4 @@
 --library hxpy
 --cpp test/bin
 --class-path "test/src/very high level embedding"
---class-path "test/src/pure embedding"
+--class-path test/src/pure_embedding

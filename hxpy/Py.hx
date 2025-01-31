@@ -38,5 +38,7 @@ extern class Py
 
     @:native('Py_FinalizeEx')
 	static function finalizeEx():Int;
-        
+
+    @:native('Py_DECREF')
+	static function DECREF(o:RawPointer<PyObject>):Void;
 }
