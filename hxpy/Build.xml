@@ -1,277 +1,38 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xml>
-	<files id="python">
-	<file name="${haxelib:hxpy}/project/python/src/Include/abstract.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/bltinmodule.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/boolobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/bytearrayobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/bytesobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/ceval.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/codecs.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/compile.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/complexobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/datetime.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/descrobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/dictobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/dynamic_annotations.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/enumobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/errcode.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/exports.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/fileobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/fileutils.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/floatobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/frameobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/genericaliasobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/import.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/intrcheck.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/iterobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/listobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/longobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/marshal.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/memoryobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/methodobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/modsupport.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/object.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/objimpl.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/opcode.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/osdefs.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/osmodule.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/patchlevel.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/py_curses.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/pybuffer.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/pycapsule.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/pydtrace.d" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/pydtrace.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/pyerrors.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/pyexpat.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/pyframe.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/pyhash.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/pylifecycle.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/pymacconfig.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/pymacro.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/pymath.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/pymem.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/pyport.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/pystate.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/pystats.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/pystrcmp.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/pystrtod.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/Python.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/pythonrun.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/pythread.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/pytypedefs.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/rangeobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/setobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/sliceobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/structmember.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/structseq.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/sysmodule.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/traceback.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/tracemalloc.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/tupleobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/typeslots.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/unicodeobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/warnings.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/weakrefobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/abstract.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/bytearrayobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/bytesobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/cellobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/ceval.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/classobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/code.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/compile.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/complexobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/content.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/descrobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/dictobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/fileobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/fileutils.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/floatobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/frameobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/funcobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/genobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/import.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/initconfig.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/listobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/longintrepr.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/longobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/memoryobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/methodobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/modsupport.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/object.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/objimpl.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/odictobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/picklebufobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/pthread_stubs.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/pyctype.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/pydebug.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/pyerrors.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/pyfpe.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/pyframe.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/pylifecycle.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/pymem.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/pystate.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/pythonrun.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/pythread.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/pytime.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/setobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/sysmodule.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/traceback.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/tupleobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/unicodeobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/warnings.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/cpython/weakrefobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_abstract.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_asdl.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_ast_state.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_ast.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_atomic_funcs.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_atomic.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_bitutils.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_blocks_output_buffer.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_bytes_methods.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_bytesobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_call.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_ceval_state.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_ceval.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_code.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_compile.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_condvar.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_context.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_descrobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_dict_state.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_dict.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_dtoa.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_emscripten_signal.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_exceptions.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_faulthandler.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_fileutils.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_floatobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_format.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_frame.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_function.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_gc.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_genobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_getopt.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_gil.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_global_objects_fini_generated.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_global_objects.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_global_strings.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_hamt.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_hashtable.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_descrobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_import.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_initconfig.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_interp.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_interpreteridobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_intrinsics.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_list.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_long.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_moduleobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_namespace.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_object.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_obmalloc_init.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_obmalloc.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_opcode.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_parser.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_pathconfig.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_pyarena.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_pyerrors.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_pyhash.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_pylifecycle.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_pymath.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_pymem_init.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_pymem.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_pystate.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_pythread.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_range.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_runtime_init_generated.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_runtime_init.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_runtime.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_signal.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_sliceobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_strhex.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_structseq.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_symtable.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_sysmodule.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_time.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_token.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_traceback.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_tracemalloc.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_tuple.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_typeobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_ucnhash.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_unicodeobject_generated.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_unicodeobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_unionobject.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Include/internal/pycore_warnings.h" />
-		<file name="${haxelib:hxpy}/project/python/src/PC/pyconfig.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Modules/_decimal/libmpdec/io.h" />
-		<file name="${haxelib:hxpy}/project/python/src/Modules/_decimal/libmpdec/mpdecimal.h" />
-	</files>
+	<pragma once="true" />
+	<set name="python_folder" value="${haxelib:hxpy}/include" />
+	<set name="lib_folder" value="${haxelib:hxpy}/libs" />
+	<section>
 
-	<files id="haxe">
-		<compilervalue name="-I" value="${haxelib:hxpy}/project/python/src/Include/" />
-		<compilervalue name="-I" value="${haxelib:hxpy}/project/python/src/PC/" />
-		<compilervalue name="-I" value="${haxelib:hxpy}/project/python/src/Python/" />
-		<compilervalue name="-I" value="${haxelib:hxpy}/project/python/src/Modules/_decimal/libmpdec/" />
-        <compilervalue name="-I" value="${haxelib:hxpy}/libs" />
-		<compilervalue name="-D" value="CONFIG_64"/>
-		<compilervalue name="-D" value="_DEBUG" if="debug" />
-	</files>
+		<files id="__main__">
+			<compilerflag value="-I${python_folder}" />
+			<compilerflag value="-I${python_folder}/cpython" />
+			<compilerflag value="-I${python_folder}/internal" />
+		</files>
 
-    <target id="haxe" tool='linker'>
-	    <section if="windows"> 
-		<lib name="${haxelib:hxpy}/libs/Windows/python3.lib"/>
-		<lib name="${haxelib:hxpy}/libs/Windows/python311.lib"/>
-		<lib name="${haxelib:hxpy}/libs/Windows/_tkinter.lib"/>
-		<lib name="${haxelib:hxpy}/libs/Windows/python3_d.lib" if="debug"/>
-		<lib name="${haxelib:hxpy}/libs/Windows/python311_d.lib" if="debug"/> 
-		</section>
+		<files id="haxe">
+			<compilerflag value="-I${python_folder}" />
+			<compilerflag value="-I${python_folder}/cpython" />
+			<compilerflag value="-I${python_folder}/internal" />
+		</files>
 
-		<section if="macos">  
-		<lib name="${haxelib:hxpy}/libs/macOS/x86_64/libpython3.11.a" if="HXCPP_M64"/> <!--non debug-->
-		</section> 
 
-		<section if="linux">  
-		<lib name="${haxelib:hxpy}/libs/Linux/libpython3.11.a" if="HXCPP_M64"/> <!--non debug-->
-		</section>
-	</target>
-
-    <section if="windows"> 
-	<copyFile name="_asyncio.pyd" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="_bz2.pyd" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="_ctypes.pyd" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="_decimal.pyd" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="_elementtree.pyd" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="_hashlib.pyd" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="_lzma.pyd" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="_msi.pyd" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="_multiprocessing.pyd" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="_overlapped.pyd" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="_queue.pyd" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="_socket.pyd" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="_sqlite3.pyd" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="_ssl.pyd" from="${haxelib:hxpy}/package/Windows/" toolId="exe" />
-	<copyFile name="_uuid.pyd" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="_zoneinfo.pyd" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="libcrypto-1_1.dll" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="libffi-8.dll" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="LICENSE.txt" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="pyexpat.pyd" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="python.cat" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="python.exe" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="python3.dll" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="python311._pth" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="python311.dll" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="python311.zip" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="pythonw.exe" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="select.pyd" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="sqlite3.dll" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="unicodedata.pyd" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="vcruntime140_1.dll" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="vcruntime140.dll" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
-	<copyFile name="winsound.pyd" from="${haxelib:hxpy}/package/Windows" toolId="exe" />
+		<target id="haxe">
+			<libpath name="${lib_folder}/" />
+			<lib name="_tkinter.lib" />
+			<section if="debug">
+				<lib name="python3_d.lib" />
+				<lib name="python3t_d.lib" />
+				<lib name="python313_d.lib" />
+				<lib name="python313t_d.lib" />
+			</section>
+			<section unless="debug">
+				<lib name="python3.lib" />
+				<lib name="python3t.lib" />
+				<lib name="python313.lib" />
+				<lib name="python313t.lib" />
+			</section>
+		</target>
+		<compilerflag  name="-DPy_DEBUG" if="debug" />
 	</section>
 </xml>
