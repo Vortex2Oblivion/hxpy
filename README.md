@@ -6,7 +6,7 @@
 
 ![](https://raw.githubusercontent.com/Vortex2Oblivion/hxpy/master/assets/hxpy-logo.png)
 
-Haxe/hxcpp @:native bindings for Python
+Haxe/hxcpp @:native bindings for the Python C API
 
 This library works on the C++ target only!
 
@@ -23,45 +23,24 @@ haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy.git
 
 ### Usage
 
-See the ![demos](https://github.com/Vortex2Oblivion/hxpy/tree/master/test/demos) folder for more usage examples
+See the ![demos](https://github.com/Vortex2Oblivion/hxpy/tree/master/test) folder for more usage examples
 
-With a file:
-
-```haxe
-package;
-
-import hxpy.Python;
-import hxpy.Python.File;
-
-class Main {
-	public static function main():Void {
-		//initializes the python instance
-		Python.initialize();
-		 //runs code               path to script file
-		File.runSimpleFile("script.py");
-		//closes the python instance
-		Python.finalize();
-	}
-}
-```
-
-Without a file:
+A simple example
 
 ```haxe
 package;
 
-import hxpy.Python;
+import hxpy.PyRun;
+import hxpy.Py;
 
 class Main {
-	public static function main():Void {
-		//initializes the python instance
-		Python.initialize();
-		//runs code
-		Python.runSimpleString("print('Hello World From Embedded Python')");
-		//closes the python instance
-		Python.finalize();
+	static function main() {
+		Py.initialize(); // Initializes the Python interpreter.
+		PyRun.simpleString("print(\"Hello World!\")"); // Runs print("Hello World").
+		Py.finalizeEx(); // Closes the Python interpreter.
 	}
 }
+
 ```
 
 ### Licensing
