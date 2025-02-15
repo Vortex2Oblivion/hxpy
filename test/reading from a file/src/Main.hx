@@ -1,5 +1,8 @@
 package;
 
+import hxpy.PyMemAllocatorEx;
+import cpp.RawPointer;
+import hxpy.PyMem;
 import hxpy.PyHelper;
 import hxpy.PyRun;
 import hxpy.Py;
