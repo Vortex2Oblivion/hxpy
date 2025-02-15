@@ -16,12 +16,12 @@ jobs:
       - name: Setup Haxe
         uses: krdlab/setup-haxe@master
         with:
-          haxe-version: 4.3.4
+          haxe-version: 4.3.6
 
       - name: Compiling 
         run: |
-          haxelib --quiet git hxpy https://github.com/Vortex2Oblivion/hxpy
-          cd "test/demos/running code without a file"
+          haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy
+          cd "test/simple example"
           haxe build.hxml
           
   demo2:
@@ -35,11 +35,48 @@ jobs:
       - name: Setup Haxe
         uses: krdlab/setup-haxe@master
         with:
-          haxe-version: 4.3.4
+          haxe-version: 4.3.6
 
       - name: Compiling 
         run: |
-          haxelib --quiet git hxpy https://github.com/Vortex2Oblivion/hxpy
-          cd "test/demos/running code from a file"
+          haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy
+          cd "test/reading from a file"
+          haxe build.hxml
+  demo3:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: true
+
+      - name: Setup Haxe
+        uses: krdlab/setup-haxe@master
+        with:
+          haxe-version: 4.3.6
+
+      - name: Compiling 
+        run: |
+          haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy
+          cd "test/very high level embedding"
+          haxe build.hxml
+
+  demo4:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: true
+
+      - name: Setup Haxe
+        uses: krdlab/setup-haxe@master
+        with:
+          haxe-version: 4.3.6
+
+      - name: Compiling 
+        run: |
+          haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy
+          cd "test/pure embedding"
           haxe build.hxml
   

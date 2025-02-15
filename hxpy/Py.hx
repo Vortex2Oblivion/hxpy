@@ -71,4 +71,7 @@ extern class Py {
 
 	@:native('Py_GetBuildInfo')
 	static function getBuildInfo():ConstCharStar;
+
+	@:native('Py_GetProgramName')
+	static function getProgramName():RawPointer<WChar>;
 }
