@@ -3,3 +3,4 @@
 -main Main
 --cpp bin
 --library hxpy
+--macro CopyFile.run()

@@ -10,6 +10,9 @@ import hxpy.PyObject;
 import hxpy.PyTuple;
 import cpp.RawPointer;
 
+/**
+ * @see https://docs.python.org/3/extending/embedding.html#pure-embedding
+ */
 class Main {
 	static var pName:RawPointer<PyObject>;
 	static var pModule:RawPointer<PyObject>;
@@ -33,7 +36,7 @@ class Main {
 
 		if (pModule != null) {
 			pFunc = PyObject.getAttrString(pModule, Sys.args()[2]);
-			if (pFunc != null && (PyCallable.check(pFunc) <= 1)) {
+			if (pFunc != null && PyCallable.check(pFunc)) {
 				pArgs = PyTuple.newPyTuple(Sys.args().length - 3);
 				for (i in 0...Sys.args().length - 3) {
 					pValue = PyLong.fromLong(Std.parseInt(Sys.args()[i + 3]));

@@ -1,5 +1,6 @@
 package hxpy;
 
+import cpp.SizeT;
 import cpp.RawPointer;
 
 @:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
@@ -11,4 +12,10 @@ extern class PyLong {
 
 	@:native('PyLong_AsLong')
 	static function asLong(obj:RawPointer<PyObject>):Int;
+
+	@:native('PyLong_AsSize_t')
+	static function asSizeT(obj:RawPointer<PyObject>):SizeT;
+
+	@:native('PyLong_AsSsize_t')
+	static function asSsizeT(obj:RawPointer<PyObject>):PySsizeT;
 }

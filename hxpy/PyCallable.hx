@@ -7,5 +7,5 @@ import cpp.RawPointer;
 @:keep
 extern class PyCallable {
 	@:native('PyCallable_Check')
-	static function check(o:RawPointer<PyObject>):Int;
+	static function check(o:RawPointer<PyObject>):Bool;
 }
