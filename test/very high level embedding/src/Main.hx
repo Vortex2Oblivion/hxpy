@@ -1,15 +1,9 @@
 package;
 
-import hxpy.FileUtils;
-import hxpy.PyObject;
-import cpp.FILE;
-import cpp.NativeFile;
-import hxpy.PyRun;
-import cpp.RawConstPointer;
-import hxpy.WChar;
-import hxpy.PyConfig;
 import hxpy.PyStatus;
+import hxpy.PyConfig;
 import hxpy.Py;
+import hxpy.PyRun;
 
 using cpp.RawPointer;
 using hxpy.WChar;
@@ -20,29 +14,27 @@ class Main {
 	static function main() {
 
 
-		PyConfig.initConfig(config.addressOf());
-		PyConfig.setBytesString(config.addressOf(), config.program_name.toWChar(), Sys.args()[0]);
+		PyConfig.initPythonConfig(config.addressOf());
+		status = PyConfig.setBytesString(config.addressOf(), config.program_name.toWChar(), Sys.args()[0]);
 
-		if (Py.exception(status) == 1) {
+		if (Py.exception(status)) {
 			exception();
 		}
 
 		status = Py.initializeFromConfig(config.addressOf());
 
-		if (Py.exception(status) == 1) {
+		if (Py.exception(status)) {
 			exception();
 		}
 
-		PyConfig.configClear(config.addressOf());
+		PyConfig.clear(config.addressOf());
 
 		PyRun.simpleString("from time import time,ctime\n" + "print('Today is', ctime(time()))\n");
-		if (Py.finalizeEx() < 0) {
-			Sys.exit(120);
-		};
+		Py.finalizeEx();
 	}
 
-	static function exception() {
-		PyConfig.configClear(config.addressOf());
+	static inline function exception() {
+		PyConfig.clear(config.addressOf());
 		PyConfig.exitStatusException(status);
 	}
 }

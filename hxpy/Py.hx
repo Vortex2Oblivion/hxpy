@@ -30,7 +30,7 @@ extern class Py {
 	static function isFinalizing():Bool;
 
 	@:native('Py_FinalizeEx')
-	static function finalizeEx():Int;
+	static function finalizeEx():Bool;
 
 	@:native('Py_Finalize')
     @:deprecated("Use finalizeEx() instead!")
@@ -49,7 +49,7 @@ extern class Py {
 	static function buildValue(a:ConstCharStar, b:ConstCharStar):RawPointer<PyObject>;
 
 	@:native('PyStatus_Exception')
-	static function exception(err:PyStatus):Int;
+	static function exception(err:PyStatus):Bool;
 
 	@:native('Py_DECREF')
 	static function DECREF(o:RawPointer<PyObject>):Void;
