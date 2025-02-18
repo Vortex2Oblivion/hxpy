@@ -20,6 +20,9 @@ extern class Py {
 	@:native('Py_True')
 	static var TRUE:RawPointer<PyObject>;
 
+	@:native('Py_None')
+	static var NONE:RawPointer<PyObject>;
+
 	@:native('Py_Initialize')
 	static function initialize():Void;
 
