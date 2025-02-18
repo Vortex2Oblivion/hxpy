@@ -12,7 +12,6 @@ class Main {
 	static function main() {
 		Py.initialize();
 		PyRun.simpleFile(PyHelper.toFile("script.py"), "script.py");
-		PyMem.getAllocator(PyMemAllocatorDomain.PYMEM_DOMAIN_MEM, RawPointer.addressOf(new PyMemAllocatorEx()));
 		Py.finalizeEx();
 	}
 }

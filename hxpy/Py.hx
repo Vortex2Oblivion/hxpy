@@ -14,6 +14,12 @@ extern class Py {
 	@:native('::String(PY_VERSION)')
 	static var VERSION:String;
 
+	@:native('Py_False')
+	static var FALSE:RawPointer<PyObject>;
+
+	@:native('Py_True')
+	static var TRUE:RawPointer<PyObject>;
+
 	@:native('Py_Initialize')
 	static function initialize():Void;
 

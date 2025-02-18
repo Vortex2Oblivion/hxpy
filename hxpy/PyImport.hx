@@ -1,5 +1,6 @@
 package hxpy;
 
+import cpp.ConstCharStar;
 import cpp.RawPointer;
 
 @:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
@@ -8,4 +9,10 @@ import cpp.RawPointer;
 extern class PyImport {
 	@:native('PyImport_Import')
 	static function importObject(name:RawPointer<PyObject>):RawPointer<PyObject>;
+
+	@:native('PyImport_AddModule')
+	static function addModule(name:ConstCharStar):RawPointer<PyObject>;
+
+	@:native('PyImport_GetModule')
+	static function getModule(name:RawPointer<PyObject>):RawPointer<PyObject>;
 }

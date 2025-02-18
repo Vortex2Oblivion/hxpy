@@ -79,4 +79,23 @@ jobs:
           haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy
           cd "test/pure embedding"
           haxe build.hxml
+
+  demo5:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: true
+
+      - name: Setup Haxe
+        uses: krdlab/setup-haxe@master
+        with:
+          haxe-version: 4.3.6
+
+      - name: Compiling 
+        run: |
+          haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy
+          cd "test/creating a variable"
+          haxe build.hxml
   
