@@ -12,4 +12,7 @@ extern class PyDict {
 
 	@:native('PyDict_SetItemString')
 	static function setItemString(dp:RawPointer<PyObject>, key:ConstCharStar, item:RawPointer<PyObject>):Bool;
+
+	@:native('PyDict_DelItemString')
+	static function delItemString(dp:RawPointer<PyObject>, key:ConstCharStar):Bool;
 }
