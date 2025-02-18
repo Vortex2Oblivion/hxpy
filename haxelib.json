@@ -2,10 +2,10 @@
     "name": "hxpy",
     "url" : "https://github.com/Vortex2Oblivion/hxpy",
     "license": "MIT",
-    "tags": ["hxcpp", "cpp", "bindings", "native", "python"],
+    "tags": ["hxcpp", "cpp", "bindings", "native", "python", "externs", "extern", "cython"],
     "description": "Haxe/hxcpp @:native bindings for Python",
-    "version": "1.0.0",
-    "releasenote": "Cleaned some stuff up, Added mac/linux support hopefully",
+    "version": "2.0.0",
+    "releasenote": "Full rewrite of the backend. Much better integration of the Python C API.",
     "contributors": ["Vortex"],
     "dependencies": {
       "hxcpp": ""
