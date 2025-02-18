@@ -23,7 +23,7 @@ haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy.git
 
 ### Usage
 
-See the ![demos](https://github.com/Vortex2Oblivion/hxpy/tree/master/test) folder for more usage examples
+See the ![demos](https://github.com/Vortex2Oblivion/hxpy/tree/master/demos) folder for more usage examples
 
 A simple example
 

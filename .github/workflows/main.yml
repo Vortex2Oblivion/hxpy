@@ -21,7 +21,7 @@ jobs:
       - name: Compiling 
         run: |
           haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy
-          cd "test/simple example"
+          cd "demos/simple example"
           haxe build.hxml
           
   demo2:
@@ -40,7 +40,7 @@ jobs:
       - name: Compiling 
         run: |
           haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy
-          cd "test/reading from a file"
+          cd "demos/reading from a file"
           haxe build.hxml
   demo3:
     runs-on: windows-latest
@@ -58,7 +58,7 @@ jobs:
       - name: Compiling 
         run: |
           haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy
-          cd "test/very high level embedding"
+          cd "demos/very high level embedding"
           haxe build.hxml
 
   demo4:
@@ -77,7 +77,7 @@ jobs:
       - name: Compiling 
         run: |
           haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy
-          cd "test/pure embedding"
+          cd "demos/pure embedding"
           haxe build.hxml
 
   demo5:
@@ -96,6 +96,6 @@ jobs:
       - name: Compiling 
         run: |
           haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy
-          cd "test/creating a variable"
+          cd "demos/creating a variable"
           haxe build.hxml
   
