@@ -1,2 +1,3 @@
 --macro hxpy.macros.CopyFiles.run()
 -D CONFIG_64
+-D HXCPP_M64
