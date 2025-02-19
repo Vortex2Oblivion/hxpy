@@ -20,19 +20,10 @@
 		<target id="haxe">
 			<libpath name="${lib_folder}/" />
 			<lib name="_tkinter.lib" />
-			<section if="debug">
-				<lib name="python3_d.lib" />
-				<lib name="python3t_d.lib" />
-				<lib name="python313_d.lib" />
-				<lib name="python313t_d.lib" />
-			</section>
-			<section unless="debug">
-				<lib name="python3.lib" />
-				<lib name="python3t.lib" />
-				<lib name="python313.lib" />
-				<lib name="python313t.lib" />
-			</section>
+			<lib name="python3.lib" />
+			<lib name="python3t.lib" />
+			<lib name="python313.lib" />
+			<lib name="python313t.lib" />
 		</target>
-		<compilerflag  name="-DPy_DEBUG" if="debug" />
 	</section>
 </xml>
