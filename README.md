@@ -36,7 +36,7 @@ import hxpy.Py;
 class Main {
 	static function main() {
 		Py.initialize(); // Initializes the Python interpreter.
-		PyRun.simpleString("print(\"Hello World!\")"); // Runs print("Hello World").
+		PyRun.simpleString("print(\"Hello World!\")"); // Runs print("Hello World!").
 		Py.finalizeEx(); // Closes the Python interpreter.
 	}
 }
