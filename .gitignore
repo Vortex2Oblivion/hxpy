@@ -1,3 +1,4 @@
 demos/*/bin/
 .vscode
 .DS_Store
+test/

@@ -18,5 +18,5 @@ extern class PyImport {
 	static function getModule(name:RawPointer<PyObject>):RawPointer<PyObject>;
 
 	@:native('PyImport_AppendInittab')
-	static function appendInittab(name:ConstCharStar, initfunc:Callable<Void>):RawPointer<PyObject>;
+	static function appendInittab(name:ConstCharStar, initfunc:RawPointer<PyObject>):RawPointer<PyObject>;
 }

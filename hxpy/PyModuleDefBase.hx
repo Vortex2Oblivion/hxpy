@@ -6,7 +6,7 @@ import cpp.RawPointer;
 
 @:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
 @:include("Python.h")
-@:native("PyModuleDefBase")
+@:native("PyModuleDef_Base")
 @:structAccess
 extern class PyModuleDefBase {
 }
