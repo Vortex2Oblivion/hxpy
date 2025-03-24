@@ -13,8 +13,8 @@ class CopyFiles {
 		var libPath:String = process.stdout.readLine();
 		var outputFolder:String = '${Compiler.getOutput()}';
 		process.close();
-        
-        copyFiles('$libPath/package', outputFolder);
+
+		copyFiles('$libPath/package', outputFolder);
 		return macro a;
 	}
 
@@ -27,7 +27,9 @@ class CopyFiles {
 			var filePath:String = '$start/$file';
 			var destPath:String = '$destination/$file';
 
-			File.copy(filePath, destPath);
+			if (!FileSystem.exists(destPath)) {
+				File.copy(filePath, destPath);
+			}
 		}
 	}
 }

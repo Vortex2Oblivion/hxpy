@@ -4,3 +4,4 @@
 --cpp bin
 --library hxpy
 --macro CopyFile.run()
+-D Py_DEBUG

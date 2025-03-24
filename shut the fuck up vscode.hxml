@@ -1,3 +1,3 @@
 --library hxpy
---cpp test/bin
 --class-path demos/callback/src
+--cpp demos/simple example/bin

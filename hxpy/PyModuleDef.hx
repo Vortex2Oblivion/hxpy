@@ -23,11 +23,10 @@ extern class PyModuleDef {
 	var m_free:Callable<(a:RawPointer<cpp.Void>) -> Void>;
 
 	static extern inline function create(m_base:PyModuleDefBase, m_name:ConstCharStar, m_doc:ConstCharStar, m_size:PySsizeT,
-			m_methods:RawPointer<PyMethodDef>, m_slots:RawPointer<PyModuleDefSlot>,
-			m_traverse:Traverseproc,
-			m_clear:Callable<(a:RawPointer<PyObject>) -> Int>, 
-			m_free:Callable<(a:RawPointer<cpp.Void>) -> Void>):PyModuleDef {
-		return untyped __cpp__("return PyModuleDef{ {0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8} }", m_base, m_name, m_doc, m_size, m_methods, m_slots, m_traverse, m_clear, m_free);
+			m_methods:RawPointer<PyMethodDef>, m_slots:RawPointer<PyModuleDefSlot>, m_traverse:Traverseproc,
+			m_clear:Callable<(a:RawPointer<PyObject>) -> Int>, m_free:Callable<(a:RawPointer<cpp.Void>) -> Void>):PyModuleDef {
+		return untyped __cpp__("PyModuleDef{ {0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8} }", m_base, m_name, m_doc, m_size, m_methods, m_slots, m_traverse,
+		m_clear, m_free);
 	}
 }
 
@@ -35,5 +34,4 @@ extern class PyModuleDef {
 @:include("Python.h")
 @:native("traverseproc")
 @:structAccess
-extern class Traverseproc {
-}
+extern class Traverseproc {}
