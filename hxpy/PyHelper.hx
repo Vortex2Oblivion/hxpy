@@ -1,11 +1,5 @@
 package hxpy;
 
-import cpp.ConstCharStar;
-import cpp.RawPointer;
-
-@:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
-@:include("Python.h")
-@:keep
 class PyHelper {
     /**
      * Returns a `RawPointer` to a `FILE` from a string path

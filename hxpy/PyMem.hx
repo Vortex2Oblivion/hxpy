@@ -1,11 +1,7 @@
 package hxpy;
 
 import cpp.SizeT;
-import cpp.RawPointer;
 
-@:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
-@:include("Python.h")
-@:keep
 extern class PyMem {
 	@:native('PyMem_Malloc')
 	static function malloc(size:SizeT):RawPointer<cpp.Void>;

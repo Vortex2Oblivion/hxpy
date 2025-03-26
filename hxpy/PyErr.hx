@@ -1,10 +1,5 @@
 package hxpy;
 
-import cpp.RawPointer;
-
-@:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
-@:include("Python.h")
-@:structAccess
 extern class PyErr {
     @:native('PyErr_Print')
 	static function print():Void;

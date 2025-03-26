@@ -7,15 +7,20 @@ import sys.FileSystem;
 import haxe.macro.Compiler;
 import haxe.macro.Context;
 
+using StringTools;
+
 class CopyFiles {
 	public static macro function run():Expr {
 		var process:Process = new Process('haxelib libpath hxpy');
 		var libPath:String = process.stdout.readLine();
-		var outputFolder:String = '${Compiler.getOutput()}';
+		var outputFolder:String = Compiler.getOutput();
+		if(Context.defined("lime")){
+			outputFolder = outputFolder.replace("obj", "bin");
+		}
 		process.close();
 
 		copyFiles('$libPath/package', outputFolder);
-		return macro a;
+		return macro null;
 	}
 
 	public static function copyFiles(start:String, destination:String) {

@@ -1,10 +1,5 @@
 package hxpy;
 
-import cpp.RawPointer;
-
-@:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
-@:include("Python.h")
-@:keep
 extern class PyFloat {
 	@:native('PyFloat_GetMax')
 	static function getMax():Float;

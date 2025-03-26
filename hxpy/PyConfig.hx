@@ -1,14 +1,9 @@
 package hxpy;
 
-import cpp.ConstCharStar;
 import cpp.RawConstPointer;
-import cpp.RawPointer;
 import cpp.UInt32;
 
-@:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
-@:include("Python.h")
 @:native("PyConfig")
-@:structAccess
 extern class PyConfig {
 	private var _config_init:Int;
 

@@ -1,12 +1,7 @@
 package hxpy;
 
 import haxe.io.BytesData;
-import cpp.RawPointer;
-import cpp.ConstCharStar;
 
-@:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
-@:include("Python.h")
-@:keep
 /**
  * @see https://docs.python.org/3/c-api/init.html
  */

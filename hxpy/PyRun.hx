@@ -1,12 +1,5 @@
 package hxpy;
 
-import cpp.NativeFile;
-import cpp.RawPointer;
-import cpp.ConstCharStar;
-
-@:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
-@:include("Python.h")
-@:keep
 extern class PyRun {
 	/**
 	 * This is a simplified interface to `anyFileExFlags()` below, leaving closeit set to `0` and flags set to `null`.
@@ -50,7 +43,7 @@ extern class PyRun {
 	 * @return Int
 	 */
 	@:native('PyRun_AnyFileExFlags')
-	static function anyFileExFlags(fp:RawPointer<NativeFile>, filename:ConstCharStar, closeit:Int, flags:RawPointer<PyCompilerFlags>):Bool;
+	static function anyFileExFlags(fp:RawPointer<FILE>, filename:ConstCharStar, closeit:Int, flags:RawPointer<PyCompilerFlags>):Bool;
 
 	/**
 	 * This is a simplified interface to `simpleStringFlags()` below, leaving the `RawPointer<PyCompilerFlags>` argument set to `null`.
@@ -103,14 +96,14 @@ extern class PyRun {
 	 * @return `false` if ran successfully. `true` otherwise.
 	 */
 	@:native('PyRun_InteractiveOne')
-	static function interactiveOne(fp:RawPointer<NativeFile>, filename:ConstCharStar):Bool;
+	static function interactiveOne(fp:RawPointer<FILE>, filename:ConstCharStar):Bool;
 
 	@:native('PyRun_InteractiveOneFlags')
-	static function interactiveOneFlags(fp:RawPointer<NativeFile>, filename:ConstCharStar, flags:RawPointer<PyCompilerFlags>):Bool;
+	static function interactiveOneFlags(fp:RawPointer<FILE>, filename:ConstCharStar, flags:RawPointer<PyCompilerFlags>):Bool;
 
 	@:native('PyRun_InteractiveOneObject')
-	static function interactiveOneObject(fp:RawPointer<NativeFile>, filename:ConstCharStar, flags:RawPointer<PyCompilerFlags>):Bool;
+	static function interactiveOneObject(fp:RawPointer<FILE>, filename:ConstCharStar, flags:RawPointer<PyCompilerFlags>):Bool;
 
 	@:native('PyRun_InteractiveLoopFlags')
-	static function interactiveLoopFlags(fp:RawPointer<NativeFile>, filename:ConstCharStar, flags:RawPointer<PyCompilerFlags>):Bool;
+	static function interactiveLoopFlags(fp:RawPointer<FILE>, filename:ConstCharStar, flags:RawPointer<PyCompilerFlags>):Bool;
 }

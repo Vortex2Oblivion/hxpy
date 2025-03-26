@@ -1,12 +1,8 @@
 package hxpy;
 
-import cpp.RawPointer;
 import cpp.Callable;
 import cpp.SizeT;
 
-@:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
-@:include("Python.h")
-@:structAccess
 @:native('PyMemAllocatorEx')
 extern class PyMemAllocatorEx {
 	function new():Void;

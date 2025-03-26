@@ -1,3 +1,4 @@
 --macro hxpy.macros.CopyFiles.run()
+--macro hxpy.macros.GlobalMetadata.run()
 -D CONFIG_64
 -D HXCPP_M64

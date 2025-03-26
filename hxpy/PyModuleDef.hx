@@ -2,12 +2,8 @@ package hxpy;
 
 import cpp.Callable;
 import cpp.ConstCharStar;
-import cpp.RawPointer;
 
-@:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
-@:include("Python.h")
 @:native("PyModuleDef")
-@:structAccess
 extern class PyModuleDef {
 	@:native("PyModuleDef_HEAD_INIT")
 	static var HEAD_INIT:PyModuleDefBase;
@@ -30,8 +26,5 @@ extern class PyModuleDef {
 	}
 }
 
-@:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
-@:include("Python.h")
 @:native("traverseproc")
-@:structAccess
 extern class Traverseproc {}

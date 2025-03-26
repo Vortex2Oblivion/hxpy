@@ -3,11 +3,7 @@ package hxpy;
 import cpp.Float32;
 import cpp.UInt64;
 import cpp.SizeT;
-import cpp.RawPointer;
 
-@:buildXml("<include name='${haxelib:hxpy}/hxpy/Build.xml' />")
-@:include("Python.h")
-@:keep
 extern class PyLong {
 	@:native('PyLong_FromLong')
 	static function fromLong(v:Int):RawPointer<PyObject>;
