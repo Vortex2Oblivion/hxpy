@@ -1,9 +1,5 @@
 package;
 
-import hxpy.PyMemAllocatorEx;
-import hxpy.PyMemAllocatorDomain;
-import cpp.RawPointer;
-import hxpy.PyMem;
 import hxpy.PyHelper;
 import hxpy.PyRun;
 import hxpy.Py;

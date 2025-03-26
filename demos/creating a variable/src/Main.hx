@@ -25,7 +25,6 @@ class Main {
 
 		// Our Int variable has changed! Lets trace the new value!
 		trace("Our int variable is now: " + PyLong.asLong(PyDict.getItemString(main, "intVariable")));
-
 		// Cleanup
 		Py.XDECREF(main);
 		Py.XDECREF(intVariable);
