@@ -1,5 +1,7 @@
 package hxpy;
 
+import cpp.WCharT;
+import cpp.ConstWCharTStar;
 import haxe.io.BytesData;
 
 /**
@@ -44,7 +46,7 @@ extern class Py {
 	static function bytesMain(argc:Int, argv:BytesData):Void;
 
     @:native('Py_Main')
-	static function main(argc:Int, argv:RawPointer<WChar>):Int;
+	static function main(argc:Int, argv:RawPointer<ConstWCharTStar>):Int;
 
     @:native('Py_RunMain')
 	static function runMain():Int;
@@ -77,5 +79,5 @@ extern class Py {
 	static function getBuildInfo():ConstCharStar;
 
 	@:native('Py_GetProgramName')
-	static function getProgramName():RawPointer<WChar>;
+	static function getProgramName():ConstWCharTStar;
 }

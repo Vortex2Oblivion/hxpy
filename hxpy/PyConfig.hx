@@ -1,6 +1,6 @@
 package hxpy;
 
-import cpp.RawConstPointer;
+import cpp.WCharTStarStar;
 import cpp.UInt32;
 
 @:native("PyConfig")
@@ -20,11 +20,11 @@ extern class PyConfig {
     public var code_debug_ranges:Int;
     public var show_ref_count:Int;
     public var dump_refs:Int;
-    public var dump_refs_file:String;
+    public var dump_refs_file:WCharTStarStar;
     public var malloc_stats:Int;
-    public var filesystem_encoding:String;
-    public var filesystem_errors:String;
-    public var pycache_prefix:String;
+    public var filesystem_encoding:WCharTStarStar;
+    public var filesystem_errors:WCharTStarStar;
+    public var pycache_prefix:WCharTStarStar;
     public var parse_argv:Int;
     public var orig_argv:PyWideStringList;
     public var argv:PyWideStringList;
@@ -43,8 +43,8 @@ extern class PyConfig {
     public var user_site_directory:Int;
     public var configure_c_stdio:Int;
     public var buffered_stdio:Int;
-    public var stdio_encoding:String;
-    public var stdio_errors:String;
+    public var stdio_encoding:WCharTStarStar;
+    public var stdio_errors:WCharTStarStar;
 
     #if MS_WINDOWS
     public var legacy_windows_stdio:Int;
@@ -61,26 +61,26 @@ extern class PyConfig {
     #end
 
     public var pathconfig_warnings:Int;
-    public var program_name:String;
-    public var pythonpath_env:String;
-    public var home:String;
-    public var platlibdir:String;
+    public var program_name:WCharTStarStar;
+    public var pythonpath_env:WCharTStarStar;
+    public var home:WCharTStarStar;
+    public var platlibdir:WCharTStarStar;
 
     public var module_search_paths_set:Int;
     public var module_search_paths:PyWideStringList;
-    public var stdlib_dir:String;
-    public var executable:String;
-    public var base_executable:String;
-    public var prefix:String;
-    public var base_prefix:String;
-    public var base_exec_prefix:String;
+    public var stdlib_dir:WCharTStarStar;
+    public var executable:WCharTStarStar;
+    public var base_executable:WCharTStarStar;
+    public var prefix:WCharTStarStar;
+    public var base_prefix:WCharTStarStar;
+    public var base_exec_prefix:WCharTStarStar;
 
     public var skip_source_first_line:Int;
-    public var run_command:String;
-    public var run_module:String;
-    public var run_filename:String;
+    public var run_command:WCharTStarStar;
+    public var run_module:WCharTStarStar;
+    public var run_filename:WCharTStarStar;
 
-    public var sys_path_0:String;
+    public var sys_path_0:WCharTStarStar;
 
     private var _install_importlib:Int;
     private var _init_main:Int;
@@ -91,7 +91,7 @@ extern class PyConfig {
     #end
 
     #if Py_DEBUG
-    public var run_presite:String;
+    public var run_presite:WCharTStarStar;
     #end
 
     @:native('PyConfig_Clear')
@@ -103,7 +103,6 @@ extern class PyConfig {
     @:native('PyConfig_InitPythonConfig')
 	static function initPythonConfig(config:RawPointer<PyConfig>):Void;
 
-	static inline function setBytesString(config:RawPointer<PyConfig>, config_str:RawConstPointer<WChar>, str:ConstCharStar):PyStatus{
-        return untyped __cpp__("PyConfig_SetBytesString({0}, const_cast<wchar_t**>({1}), {2})", config, RawPointer.addressOf(config_str), str);
-    }
+    @:native('PyConfig_SetBytesString')
+	static function setBytesString(config:RawPointer<PyConfig>, config_str:RawPointer<WCharTStarStar>, str:ConstCharStar):PyStatus;
 }

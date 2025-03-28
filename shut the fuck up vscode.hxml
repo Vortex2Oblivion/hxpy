@@ -1,3 +1,4 @@
 --library hxpy
+--library cpphelpers
 --class-path demos/callback/src
 --cpp demos/simple example/bin

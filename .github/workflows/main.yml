@@ -20,7 +20,8 @@ jobs:
 
       - name: Compiling 
         run: |
-          haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy
+          haxelib git cpphelpers https://github.com/Vortex2Oblivion/cpphelpers
+          haxelib --never git hxpy https://github.com/Vortex2Oblivion/hxpy
           cd "demos/simple example"
           haxe build.hxml
           
@@ -39,7 +40,8 @@ jobs:
 
       - name: Compiling 
         run: |
-          haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy
+          haxelib git cpphelpers https://github.com/Vortex2Oblivion/cpphelpers
+          haxelib --never git hxpy https://github.com/Vortex2Oblivion/hxpy
           cd "demos/reading from a file"
           haxe build.hxml
   demo3:
@@ -57,7 +59,8 @@ jobs:
 
       - name: Compiling 
         run: |
-          haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy
+          haxelib git cpphelpers https://github.com/Vortex2Oblivion/cpphelpers
+          haxelib --never git hxpy https://github.com/Vortex2Oblivion/hxpy
           cd "demos/very high level embedding"
           haxe build.hxml
 
@@ -76,7 +79,8 @@ jobs:
 
       - name: Compiling 
         run: |
-          haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy
+          haxelib git cpphelpers https://github.com/Vortex2Oblivion/cpphelpers
+          haxelib --never git hxpy https://github.com/Vortex2Oblivion/hxpy
           cd "demos/pure embedding"
           haxe build.hxml
 
@@ -95,7 +99,8 @@ jobs:
 
       - name: Compiling 
         run: |
-          haxelib git hxpy https://github.com/Vortex2Oblivion/hxpy
+          haxelib git cpphelpers https://github.com/Vortex2Oblivion/cpphelpers
+          haxelib --never git hxpy https://github.com/Vortex2Oblivion/hxpy
           cd "demos/creating a variable"
           haxe build.hxml
   

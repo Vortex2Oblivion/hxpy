@@ -8,6 +8,7 @@
     "releasenote": "Full rewrite of the backend. Much better integration of the Python C API.",
     "contributors": ["Vortex"],
     "dependencies": {
-      "hxcpp": ""
+      "hxcpp": "",
+      "cpphelpers": ""
     }
   }

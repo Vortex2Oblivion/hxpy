@@ -6,16 +6,14 @@ import hxpy.Py;
 import hxpy.PyRun;
 
 using cpp.RawPointer;
-using hxpy.WChar;
 
 class Main {
 	static var status:PyStatus;
 	static var config:PyConfig;
 	static function main() {
 
-
 		PyConfig.initPythonConfig(config.addressOf());
-		status = PyConfig.setBytesString(config.addressOf(), config.program_name.toWChar(), Sys.args()[0]);
+		status = PyConfig.setBytesString(config.addressOf(), config.program_name.addressOf(), Sys.args()[0]);
 
 		if (Py.exception(status)) {
 			exception();
