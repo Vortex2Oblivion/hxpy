@@ -1,0 +1,23 @@
+<xml>
+	<pragma once="true" />
+	<set name="python_folder" value="${haxelib:hxpy}/include" />
+	<set name="python_lib_folder" value="${haxelib:hxpy}/libs" />
+
+	<files id="__main__">
+		<compilerflag value="-I${python_folder}" />
+		<compilerflag value="-I${python_folder}/cpython" />
+		<compilerflag value="-I${python_folder}/internal" />
+	</files>
+
+	<files id="haxe">
+		<compilerflag value="-I${python_folder}" />
+		<compilerflag value="-I${python_folder}/cpython" />
+		<compilerflag value="-I${python_folder}/internal" />
+	</files>
+
+
+	<target id="haxe" tool="linker" toolid="exe" >
+		<lib name="${python_lib_folder}/_tkinter.lib" />
+		<lib name="${python_lib_folder}/python313.lib" />
+	</target>
+</xml>
