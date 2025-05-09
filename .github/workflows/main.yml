@@ -16,7 +16,7 @@ jobs:
       - name: Setup Haxe
         uses: krdlab/setup-haxe@master
         with:
-          haxe-version: 4.3.6
+          haxe-version: 4.3.7
 
       - name: Compiling 
         run: |
@@ -55,7 +55,7 @@ jobs:
       - name: Setup Haxe
         uses: krdlab/setup-haxe@master
         with:
-          haxe-version: 4.3.6
+          haxe-version: 4.3.7
 
       - name: Compiling 
         run: |
@@ -75,7 +75,7 @@ jobs:
       - name: Setup Haxe
         uses: krdlab/setup-haxe@master
         with:
-          haxe-version: 4.3.6
+          haxe-version: 4.3.7
 
       - name: Compiling 
         run: |
@@ -95,7 +95,7 @@ jobs:
       - name: Setup Haxe
         uses: krdlab/setup-haxe@master
         with:
-          haxe-version: 4.3.6
+          haxe-version: 4.3.7
 
       - name: Compiling 
         run: |
