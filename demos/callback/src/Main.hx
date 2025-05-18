@@ -1,5 +1,6 @@
 package;
 
+import cpp.Function;
 import cpp.Callable;
 import hxpy.*;
 
@@ -10,7 +11,7 @@ class Main {
 
 	static function embNumargs(self:RawPointer<PyObject>, args:RawPointer<PyObject>):RawPointer<PyObject> {
 		trace("PENIS");
-		if (!PyArg.parseTuple(args, ":numargs")){
+		if (!PyArg.parseTuple(args, ":numargs")) {
 			trace("PENIS");
 			return null;
 		}
@@ -18,16 +19,27 @@ class Main {
 		return PyLong.fromLong(numargs);
 	}
 
-	static var embMethods:StdVector<PyMethodDef> = untyped __cpp__("{ PyMethodDef{ {0}, {1}, {2}, {3} }, PyMethodDef { NULL, NULL, 0, NULL } }", "numargs", Callable.fromStaticFunction(embNumargs), 1, "Return the number of arguments received by the process.");
+	static function PyInit_emb():RawPointer<PyObject> {
+		untyped __cpp__('
+			static PyMethodDef EmbMethods[] = {
+				{"numargs", {0} , METH_VARARGS,
+				"Return the number of arguments received by the process."},
+				{NULL, NULL, 0, NULL}
+			};
 
-	static var embModule:PyModuleDef = untyped __cpp__("PyModuleDef{ {0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8} }", PyModuleDef.HEAD_INIT, "emb", null, -1, embMethods, null, null, null, null);
-
-	static function emb():RawPointer<PyObject> {
-		return PyModule.create(embModule.addressOf());
+			static PyModuleDef EmbModule = {
+				PyModuleDef_HEAD_INIT, "emb", NULL, -1, EmbMethods,
+				NULL, NULL, NULL, NULL
+			};
+		', Function.fromStaticFunction(embNumargs));
+		return untyped __cpp__("PyModule_Create(&EmbModule)");
 	}
 
+
 	static function main() {
-		PyImport.appendInittab("emb", Callable.fromStaticFunction(emb));
+		untyped __cpp__('
+		PyImport_AppendInittab("emb", &PyInit_emb);
+		' );
 		Py.initialize();
 		PyRun.simpleFile(PyHelper.toFile("script.py"), "script.py");
 		Py.finalizeEx();

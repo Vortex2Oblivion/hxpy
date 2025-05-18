@@ -1,2 +1,2 @@
 import emb
-emb.numargs()
+print("Number of arguments", emb.numargs())
