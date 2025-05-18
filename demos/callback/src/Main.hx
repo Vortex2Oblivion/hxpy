@@ -7,16 +7,12 @@ import hxpy.*;
 using cpp.RawPointer;
 
 class Main {
-	static var numargs:Int = Sys.args().length;
-
 	static function embNumargs(self:RawPointer<PyObject>, args:RawPointer<PyObject>):RawPointer<PyObject> {
-		trace("PENIS");
 		if (!PyArg.parseTuple(args, ":numargs")) {
-			trace("PENIS");
 			return null;
 		}
 
-		return PyLong.fromLong(numargs);
+		return PyLong.fromLong(Sys.args().length);
 	}
 
 	static function PyInit_emb():RawPointer<PyObject> {
