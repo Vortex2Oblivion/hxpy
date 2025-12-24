@@ -19,7 +19,10 @@ extern class PyMethodDef {
 	 * @param ml_flags Combination of METH_xxx flags, which mostly describe the args expected by the C func
 	 * @param ml_doc The `__doc__` attribute, or null
 	 */
-	static extern inline function create(ml_name:ConstCharStar, ml_meth:PyCFunction, ml_flags:Int, ml_doc:ConstCharStar):PyMethodDef {
+	static extern inline function create(ml_name:ConstCharStar, ml_meth:PyCFunction, ml_flags:Int, ml_doc:ConstCharStar):StaticPyMethodDef {
 		return untyped __cpp__("PyMethodDef{ {0}, {1}, {2}, {3} }", ml_name, ml_meth, ml_flags, ml_doc);
 	}
 }
+
+@:native("static PyMethodDef")
+extern class StaticPyMethodDef extends PyMethodDef{}

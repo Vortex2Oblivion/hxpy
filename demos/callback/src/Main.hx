@@ -1,5 +1,4 @@
 package;
-
 import cpp.Function;
 import cpp.Callable;
 import hxpy.*;
@@ -15,6 +14,7 @@ class Main {
 		return PyLong.fromLong(Sys.args().length);
 	}
 
+
 	static function PyInit_emb():RawPointer<PyObject> {
 		untyped __cpp__('
 			static PyMethodDef EmbMethods[] = {
@@ -22,20 +22,15 @@ class Main {
 				"Return the number of arguments received by the process."},
 				{NULL, NULL, 0, NULL}
 			};
-
-			static PyModuleDef EmbModule = {
-				PyModuleDef_HEAD_INIT, "emb", NULL, -1, EmbMethods,
-				NULL, NULL, NULL, NULL
-			};
 		', Function.fromStaticFunction(embNumargs));
-		return untyped __cpp__("PyModule_Create(&EmbModule)");
+
+		var embModule = PyModuleDef.create(PyModuleDef.HEAD_INIT, "emb", untyped NULL, -1, untyped EmbMethods, untyped NULL, untyped NULL, untyped NULL, untyped NULL);
+
+		return PyModule.create(RawPointer.addressOf(embModule));
 	}
 
-
 	static function main() {
-		untyped __cpp__('
-		PyImport_AppendInittab("emb", &PyInit_emb);
-		' );
+		PyImport.appendInittab("emb", PyInit_emb);
 		Py.initialize();
 		PyRun.simpleFile(PyHelper.toFile("script.py"), "script.py");
 		Py.finalizeEx();
