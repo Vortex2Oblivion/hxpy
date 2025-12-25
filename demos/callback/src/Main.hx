@@ -1,11 +1,8 @@
 package;
 
-import hxpy.PyModuleDef.StaticPyModuleDef;
-import cpp.RawFILE;
+import hxpy.PyModuleDef;
 import hxpy.PyMethodDef;
-import cpp.CPPArray;
 import cpp.CArray;
-import cpp.Pointer;
 import cpp.Function;
 import hxpy.*;
 import cpp.Keywords.nullptr;
@@ -22,7 +19,7 @@ class Main {
 	}
 
 	static function pyInitEmb():RawPointer<PyObject> {
-		var embMethods:RawPointer<PyMethodDef> = CPPArray.create(2, PyMethodDef);
+		var embMethods:RawPointer<PyMethodDef> = CArray.create(2, PyMethodDef);
 
 		embMethods[0] = PyMethodDef.create("numargs", Function.fromStaticFunction(embNumargs), PyMethodDef.METH_VARARGS,
 			"Return the number of arguments received by the process.");
